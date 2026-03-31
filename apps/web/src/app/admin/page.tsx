@@ -282,8 +282,7 @@ export default function AdminPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700, color: '#F9FAFB' }}>{count}</span>
                       <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#4B5563' }}>
-                        {fmt(count * ({ free: 0, builder: 49, pro: 149, agency: 499 }[plan] || 0))}/mo
-                      </span>
+                     {fmt((count as number) * (({ free: 0, builder: 49, pro: 149, agency: 499 } as Record<string, number>)[plan as string] || 0))}/mo                      </span>
                     </div>
                   </div>
                 ))}
