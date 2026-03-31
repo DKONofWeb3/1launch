@@ -1,0 +1,26 @@
+{
+  "name": "@1launch/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@solana/spl-token": "^0.4.6",
+    "@solana/web3.js": "^1.95.0",
+    "@supabase/supabase-js": "^2.43.0",
+    "axios": "^1.7.0",
+    "bs58": "^5.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "ethers": "^6.12.0",
+    "express": "^4.19.0",
+    "html-pdf-node": "^1.0.8",
+    "node-cron": "^3.0.3",
+    "telegraf": "^4.16.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
