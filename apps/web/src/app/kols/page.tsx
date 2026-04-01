@@ -437,7 +437,39 @@ export default function KOLMarketplacePage() {
   const availableCount = kols.filter(k => k.status === 'open').length
 
   return (
-    <div className="dashboard-layout">
+    <div className="dashboard-layout" style={{ position: 'relative' }}>
+
+      {/* Coming Soon overlay */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        pointerEvents: 'none',
+        padding: '40px 20px',
+      }}>
+        <div style={{
+          transform: 'rotate(-3deg)',
+          background: '#0A0A0F',
+          border: '2px solid #00FF88',
+          borderRadius: 16,
+          padding: '32px 48px',
+          textAlign: 'center',
+          boxShadow: '0 0 60px rgba(0,255,136,0.15), 0 0 0 1px rgba(0,255,136,0.1)',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 12 }}>
+            Coming Soon
+          </div>
+          <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 32, fontWeight: 900, color: '#F9FAFB', letterSpacing: '-1px', marginBottom: 8 }}>
+            KOL Marketplace
+          </div>
+          <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563', maxWidth: 280, lineHeight: 1.7 }}>
+            Vetted crypto influencers, ranked by engagement rate. Book directly through 1launch.
+          </div>
+        </div>
+      </div>
+
+      {/* Blurred content behind */}
+      <div style={{ filter: 'blur(4px)', opacity: 0.4, pointerEvents: 'none' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -581,6 +613,7 @@ export default function KOLMarketplacePage() {
           100% { background-position: -200% 0; }
         }
       `}</style>
+      </div>
     </div>
   )
 }

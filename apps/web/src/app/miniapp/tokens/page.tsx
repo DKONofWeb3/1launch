@@ -17,7 +17,10 @@ export default function MiniAppTokens() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/api/launched-tokens')
+    // Get wallet from Telegram user or localStorage
+    const wallet = typeof window !== 'undefined' ? localStorage.getItem('1launch_wallet') : null
+    const params = wallet ? `?wallet=${wallet}` : ''
+    api.get(`/api/launched-tokens${params}`)
       .then(res => { if (res.data.success) setTokens(res.data.data || []) })
       .finally(() => setLoading(false))
   }, [])

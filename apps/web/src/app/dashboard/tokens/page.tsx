@@ -4,32 +4,37 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAccount } from 'wagmi'
 import { api } from '@/lib/api'
 import { TokenCard } from '@/components/dashboard/TokenCard'
 import { IconSignal, IconRocket, IconTrendingUp } from '@/components/ui/Icons'
 
 export default function TokensPage() {
   const router = useRouter()
+  const { address } = useAccount()
   const [tokens, setTokens] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   function loadTokens() {
     setLoading(true)
-    api.get('/api/launched-tokens')
+    const params = address ? `?wallet=${address}` : ''
+    api.get(`/api/launched-tokens${params}`)
       .then(res => { if (res.data.success) setTokens(res.data.data) })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { loadTokens() }, [])
+  useEffect(() => { loadTokens() }, [address])
 
   return (
     <div className="dashboard-layout">
       <div className="page-header">
         <div>
           <h1 className="page-title">Launched Tokens</h1>
-          <p className="page-subtitle">Live market data for all your deployed tokens</p>
+          <p className="page-subtitle">
+            {address ? 'Your deployed tokens with live market data' : 'Connect wallet to see your tokens'}
+          </p>
         </div>
         <button
           onClick={() => router.push('/dashboard')}
@@ -44,6 +49,12 @@ export default function TokensPage() {
           New Token
         </button>
       </div>
+
+      {!address && (
+        <div style={{ padding: '20px', background: 'rgba(255,149,0,0.06)', border: '1px solid rgba(255,149,0,0.2)', borderRadius: 10, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#FF9500' }}>
+          Connect your wallet to see your tokens
+        </div>
+      )}
 
       {error && (
         <div style={{ padding: '12px 16px', background: 'rgba(255,59,59,0.08)', border: '1px solid rgba(255,59,59,0.2)', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#FF6B6B' }}>
@@ -69,10 +80,7 @@ export default function TokensPage() {
       </div>
 
       <style>{`
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
       `}</style>
     </div>
   )
