@@ -1,30 +1,55 @@
+// apps/api/src/services/googleTrendsScraper.js
+// Gets daily trending searches from Google Trends RSS
+
 const axios = require('axios')
 
-// Google Trends daily trending searches — no API key required
-// Returns JSON of today's trending searches for a given geo
 async function scrapeGoogleTrends(geo = 'US') {
   try {
-   const res = await axios.get(
-  `https://trends.google.com/trends/api/dailytrends?hl=en-US&geo=${geo}&tz=360`,
-  { timeout: 10000 }
-)
+    const res = await axios.get(
+      `https://trends.google.com/trends/trendingsearches/daily/rss?geo=${geo}`,
+      {
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/rss+xml, text/xml, */*',
+        },
+      }
+    )
 
-    // Google prepends ")]}',\n" to prevent JSON hijacking — strip it
-    const raw = res.data.replace(")]}',\n", '')
-    const parsed = JSON.parse(raw)
+    const xml   = res.data
+    const items = []
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g
+    let match
 
-    const trendingSearches =
-      parsed.default.trendingSearchesDays[0]?.trendingSearches || []
+    while ((match = itemRegex.exec(xml)) !== null) {
+      const block     = match[1]
+      const title     = block.match(/<title>(.*?)<\/title>/)?.[1]?.replace(/<[^>]+>/g, '').trim()
+      const traffic   = block.match(/<ht:approx_traffic>(.*?)<\/ht:approx_traffic>/)?.[1]?.trim()
+      const newsTitle = block.match(/<ht:news_item_title>(.*?)<\/ht:news_item_title>/)?.[1]?.replace(/<[^>]+>/g, '').trim()
 
-    return trendingSearches.map((item) => ({
-      text: item.title.query,
-      traffic: item.formattedTraffic, // e.g. "200K+"
-      relatedQueries: item.relatedQueries?.map((q) => q.query) || [],
-      source: 'google_trends',
-      meta: { geo, traffic: item.formattedTraffic },
-    }))
+      if (!title) continue
+
+      let trafficNum = 0
+      if (traffic) {
+        const t = traffic.replace(/[^0-9KMB.]/g, '')
+        if (t.includes('B'))     trafficNum = parseFloat(t) * 1000000000
+        else if (t.includes('M')) trafficNum = parseFloat(t) * 1000000
+        else if (t.includes('K')) trafficNum = parseFloat(t) * 1000
+        else                      trafficNum = parseInt(t) || 0
+      }
+
+      items.push({
+        text:   newsTitle ? `${title} — ${newsTitle}` : title,
+        score:  Math.min(100, Math.floor(trafficNum / 10000)),
+        source: 'google_trends',
+        meta:   { query: title, traffic, geo },
+      })
+    }
+
+    console.log(`[GoogleTrends] ${items.length} trending searches for ${geo}`)
+    return items.slice(0, 20)
   } catch (err) {
-    console.warn('[Google Trends] Fetch failed:', err.message)
+    console.warn('[GoogleTrends] Failed:', err.message)
     return []
   }
 }
