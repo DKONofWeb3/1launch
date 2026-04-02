@@ -5,7 +5,8 @@ const { supabase } = require('../../lib/supabase')
 const { getTokenData } = require('../dexscreenerService')
 const { collectMarketSignals } = require('../launchTimingService')
 
-let bot = null
+let bot        = null
+let botStarted = false
 
 function getBot() {
   if (!bot && process.env.TELEGRAM_BOT_TOKEN) {
@@ -311,11 +312,16 @@ async function sendNotification(chatId, message, options = {}) {
 }
 
 function startBot() {
+  if (botStarted) {
+    console.warn('[TelegramBot] Already running — skipping duplicate start')
+    return
+  }
   const b = getBot()
   if (!b) {
     console.warn('[TelegramBot] TELEGRAM_BOT_TOKEN not set — bot disabled')
     return
   }
+  botStarted = true
 
   b.launch()
     .then(() => console.log('[TelegramBot] Bot started'))

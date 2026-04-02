@@ -349,7 +349,7 @@ export default function LandingPage() {
                 Know what's trending before everyone else does
               </h3>
               <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', lineHeight: 1.8, marginBottom: 24 }}>
-                Live narrative feed pulls signals from Reddit, DexScreener, CoinGecko and Google Trends every 30 minutes. Each narrative is scored 0-100 by hype velocity. First mover wins.
+                Live narrative feed pulls signals from Reddit, Google Trends, and many more sources every 30 minutes. Each narrative is scored 0-100 by hype velocity. First mover wins.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {['Reddit + DexScreener + CoinGecko signals', 'Hype score updated every 30 minutes', 'AI ticker suggestions per narrative'].map(f => (

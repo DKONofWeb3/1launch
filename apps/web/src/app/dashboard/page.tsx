@@ -71,7 +71,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="page-title">Narrative Feed</h1>
           <p className="page-subtitle">
-            Live signals from Reddit, DexScreener, CoinGecko — ranked by momentum
+            Live signals from Reddit, Google Trends and many more sources — ranked by momentum
           </p>
         </div>
         <div className="header-actions">

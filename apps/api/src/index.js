@@ -136,7 +136,9 @@ startBot()
 const { restoreRunningSessions } = require('./services/bot/botManager')
 restoreRunningSessions()
 
-runNarrativeCron()
+// Narrative cron runs on schedule only — not on startup
+// Uncomment line below to force a manual run:
+// runNarrativeCron()
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

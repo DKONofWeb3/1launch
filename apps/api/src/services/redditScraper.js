@@ -1,21 +1,21 @@
 // apps/api/src/services/redditScraper.js
-// Tracks culture, news, sports, entertainment — NOT crypto subs
+// Culture, news, sports, entertainment — NOT crypto
 
 const axios = require('axios')
 
 const SUBREDDITS = [
   // World events & news
-  'worldnews', 'news', 'politics', 'USnews',
+  'worldnews', 'news', 'politics', 'USnews', 'geopolitics',
   // Tech & viral
-  'technology', 'Futurology', 'artificial',
+  'technology', 'Futurology', 'singularity',
   // Culture & entertainment
-  'entertainment', 'popculturechat', 'celebrity',
+  'entertainment', 'popculturechat', 'Oscars',
   // Sports moments
-  'sports', 'nba', 'soccer', 'nfl',
-  // Viral & memes
-  'all', 'nottheonion', 'Unexpected', 'MadeMeSmile',
-  // Trending slang & culture
-  'OutOfTheLoop', 'TrueOffMyChest', 'AITA',
+  'sports', 'nba', 'soccer', 'nfl', 'tennis',
+  // Viral moments — no private/restricted subs
+  'nottheonion', 'Unexpected', 'MadeMeSmile', 'interestingasfuck',
+  // Trending culture
+  'OutOfTheLoop', 'NoStupidQuestions',
 ]
 
 async function fetchSubredditHot(subreddit, limit = 20) {
@@ -23,34 +23,30 @@ async function fetchSubredditHot(subreddit, limit = 20) {
     const res = await axios.get(
       `https://www.reddit.com/r/${subreddit}/hot.json?limit=${limit}`,
       {
-        headers: { 'User-Agent': '1launch-narrative-bot/1.0' },
-        timeout: 8000,
+        headers: { 'User-Agent': 'Mozilla/5.0 1launch-narrative-bot/1.0' },
+        timeout: 10000,
       }
     )
+
     return res.data.data.children
       .map(post => ({
-        title:       post.data.title,
-        score:       post.data.score,
-        comments:    post.data.num_comments,
-        ratio:       post.data.upvote_ratio,
-        created_utc: post.data.created_utc,
+        title:    post.data.title,
+        score:    post.data.score,
+        comments: post.data.num_comments,
+        ratio:    post.data.upvote_ratio,
         subreddit,
-        url:         `https://reddit.com${post.data.permalink}`,
       }))
-      .filter(p => p.score > 500) // only meaningful posts
+      .filter(p => p.score > 300)
   } catch (err) {
-    console.warn(`[Reddit] r/${subreddit} failed:`, err.message)
+    console.warn(`[Reddit] r/${subreddit} failed: ${err.message?.slice(0, 40)}`)
     return []
   }
 }
 
 async function scrapeReddit() {
-  const results = await Promise.all(
-    SUBREDDITS.map(sub => fetchSubredditHot(sub))
-  )
-
-  const flat = results.flat()
-  const seen = new Set()
+  const results = await Promise.all(SUBREDDITS.map(sub => fetchSubredditHot(sub)))
+  const flat    = results.flat()
+  const seen    = new Set()
 
   return flat
     .filter(p => {
@@ -64,7 +60,7 @@ async function scrapeReddit() {
       text:   post.title,
       score:  post.score,
       source: 'reddit',
-      meta:   { subreddit: post.subreddit, comments: post.comments, ratio: post.ratio },
+      meta:   { subreddit: post.subreddit, comments: post.comments },
     }))
 }
 

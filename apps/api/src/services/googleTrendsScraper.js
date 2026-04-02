@@ -1,57 +1,61 @@
 // apps/api/src/services/googleTrendsScraper.js
-// Gets daily trending searches from Google Trends RSS
+// Uses Google News search for trending topics — works globally
 
 const axios = require('axios')
 
-async function scrapeGoogleTrends(geo = 'US') {
-  try {
-    const res = await axios.get(
-      `https://trends.google.com/trends/trendingsearches/daily/rss?geo=${geo}`,
-      {
-        timeout: 10000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'application/rss+xml, text/xml, */*',
-        },
+const TRENDING_SEARCHES = [
+  'viral today',
+  'breaking news',
+  'trending now',
+  'just happened',
+]
+
+async function scrapeGoogleTrends() {
+  const results = []
+
+  for (const query of TRENDING_SEARCHES) {
+    try {
+      const res = await axios.get(
+        `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
+        {
+          timeout: 12000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept':     'application/rss+xml, text/xml, */*',
+          },
+        }
+      )
+
+      const itemRegex = /<item>([\s\S]*?)<\/item>/g
+      let match
+      while ((match = itemRegex.exec(res.data)) !== null) {
+        const block = match[1]
+        const title = block.match(/<title>(.*?)<\/title>/)?.[1]?.replace(/<[^>]+>/g, '').trim()
+        if (title && title.length > 10) {
+          results.push({
+            text:   title,
+            score:  70,
+            source: 'google_trends',
+            meta:   { query },
+          })
+        }
       }
-    )
-
-    const xml   = res.data
-    const items = []
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g
-    let match
-
-    while ((match = itemRegex.exec(xml)) !== null) {
-      const block     = match[1]
-      const title     = block.match(/<title>(.*?)<\/title>/)?.[1]?.replace(/<[^>]+>/g, '').trim()
-      const traffic   = block.match(/<ht:approx_traffic>(.*?)<\/ht:approx_traffic>/)?.[1]?.trim()
-      const newsTitle = block.match(/<ht:news_item_title>(.*?)<\/ht:news_item_title>/)?.[1]?.replace(/<[^>]+>/g, '').trim()
-
-      if (!title) continue
-
-      let trafficNum = 0
-      if (traffic) {
-        const t = traffic.replace(/[^0-9KMB.]/g, '')
-        if (t.includes('B'))     trafficNum = parseFloat(t) * 1000000000
-        else if (t.includes('M')) trafficNum = parseFloat(t) * 1000000
-        else if (t.includes('K')) trafficNum = parseFloat(t) * 1000
-        else                      trafficNum = parseInt(t) || 0
-      }
-
-      items.push({
-        text:   newsTitle ? `${title} — ${newsTitle}` : title,
-        score:  Math.min(100, Math.floor(trafficNum / 10000)),
-        source: 'google_trends',
-        meta:   { query: title, traffic, geo },
-      })
+    } catch (err) {
+      console.warn(`[GoogleTrends] Query "${query}" failed: ${err.message?.slice(0, 40)}`)
     }
-
-    console.log(`[GoogleTrends] ${items.length} trending searches for ${geo}`)
-    return items.slice(0, 20)
-  } catch (err) {
-    console.warn('[GoogleTrends] Failed:', err.message)
-    return []
   }
+
+  // Deduplicate
+  const seen    = new Set()
+  const deduped = results.filter(r => {
+    const key = r.text.toLowerCase().slice(0, 50)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  console.log(`[GoogleTrends] Got ${deduped.length} trending items via Google News search`)
+  return deduped.slice(0, 30)
 }
 
 module.exports = { scrapeGoogleTrends }

@@ -1,21 +1,16 @@
 // apps/api/src/cron/copycatCron.js
 
-const { supabase } = require('../lib/supabase')
-const { findCopycats } = require('../services/tokenSearchService')
+const { supabase }        = require('../lib/supabase')
+const { findCopycats }    = require('../services/tokenSearchService')
 const { sendNotification } = require('../services/telegram/telegramBot')
 
-// Runs every hour — checks all launched tokens for new copycats
 async function runCopycatScan() {
   console.log('[CopycatCron] Starting scan...')
 
   try {
-    // Get all launched tokens with their draft info
     const { data: tokens, error } = await supabase
       .from('launched_tokens')
-      .select(`
-        id, contract_address, chain, launched_at,
-        token_drafts(name, ticker)
-      `)
+      .select(`id, contract_address, chain, launched_at, user_id, token_drafts(name, ticker)`)
       .limit(50)
 
     if (error || !tokens?.length) return
@@ -32,7 +27,8 @@ async function runCopycatScan() {
           token.launched_at
         )
 
-        if (!copycats.length) continue
+        // findCopycats returns an array — guard against unexpected shapes
+        if (!Array.isArray(copycats) || copycats.length === 0) continue
 
         // Check which ones we haven't alerted about yet
         const { data: existing } = await supabase
@@ -40,47 +36,44 @@ async function runCopycatScan() {
           .select('copycat_address')
           .eq('token_id', token.id)
 
-        const alerted = new Set(existing || []).map((r => r.copycat_address))
+        const alerted     = new Set((existing || []).map(r => r.copycat_address))
         const newCopycats = copycats.filter(c => !alerted.has(c.address))
 
         for (const copycat of newCopycats) {
-          // Save to DB
           await supabase
             .from('copycat_alerts')
             .insert({
-              token_id:         token.id,
-              copycat_address:  copycat.address,
-              copycat_name:     copycat.name,
-              copycat_ticker:   copycat.ticker,
-              copycat_chain:    copycat.chain,
-              similarity:       copycat.similarity,
-              volume_24h:       copycat.volume_24h,
-              market_cap:       copycat.market_cap,
-              dex_url:          copycat.dex_url,
-              detected_at:      new Date().toISOString(),
+              token_id:        token.id,
+              copycat_address: copycat.address,
+              copycat_name:    copycat.name,
+              copycat_ticker:  copycat.ticker,
+              copycat_chain:   copycat.chain,
+              similarity:      copycat.similarity,
+              volume_24h:      copycat.volume_24h,
+              market_cap:      copycat.market_cap,
+              dex_url:         copycat.dex_url,
+              detected_at:     new Date().toISOString(),
             })
             .catch(() => {})
 
-          // Send TG alert if user has a linked TG chat
-          const { data: user } = await supabase
-            .from('users')
-            .select('telegram_chat_id')
-            .eq('id', token.user_id || '')
-            .single()
-            .catch(() => ({ data: null }))
+          // TG alert if user has chat linked
+          if (token.user_id) {
+            const { data: user } = await supabase
+              .from('users')
+              .select('telegram_chat_id')
+              .eq('id', token.user_id)
+              .single()
+              .catch(() => ({ data: null }))
 
-          if (user?.telegram_chat_id) {
-            const msg =
-              `*Copycat Alert — $${draft.ticker}*\n\n` +
-              `New token detected with similar ${copycat.similarity === 'exact_ticker' ? 'ticker' : 'name'}:\n\n` +
-              `Name: ${copycat.name} ($${copycat.ticker})\n` +
-              `Chain: ${copycat.chain}\n` +
-              `Volume 24h: $${copycat.volume_24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}\n` +
-              `Address: \`${copycat.address}\`\n\n` +
-              `Warn your community to watch out for this.\n` +
-              `View: ${copycat.dex_url}`
-
-            await sendNotification(user.telegram_chat_id, msg)
+            if (user?.telegram_chat_id) {
+              const msg =
+                `*Copycat Alert — $${draft.ticker}*\n\n` +
+                `New token detected: ${copycat.name} ($${copycat.ticker})\n` +
+                `Chain: ${copycat.chain}\n` +
+                `Volume 24h: $${(copycat.volume_24h || 0).toLocaleString()}\n` +
+                `View: ${copycat.dex_url}`
+              await sendNotification(user.telegram_chat_id, msg)
+            }
           }
         }
 

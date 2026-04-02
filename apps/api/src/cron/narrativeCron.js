@@ -39,7 +39,7 @@ async function runNarrativeCron() {
     const scored = clusters
       .map(c => ({ ...c, hype_score: computeHypeScore(c.signals) }))
       .sort((a, b) => b.hype_score - a.hype_score)
-      .slice(0, 15)
+      .slice(0, 6)
 
     // ── Step 4: AI evaluation — filter for actual memecoin potential ──────────
     const enriched = []
@@ -73,7 +73,7 @@ async function runNarrativeCron() {
         })
 
         console.log(`[NarrativeCron] Narrative: "${ai.title}" — meme score: ${ai.meme_score}`)
-        await new Promise(r => setTimeout(r, 800)) // rate limit AI calls
+        await new Promise(r => setTimeout(r, 2000)) // respect rate limits
       } catch (err) {
         console.warn('[NarrativeCron] Cluster enrichment failed:', err.message)
       }
