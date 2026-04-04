@@ -542,20 +542,15 @@ function Step5Confirm({
         </p>
       </Card>
 
-      {/* Warning */}
-      <div style={{
-        padding: '12px 16px', background: 'rgba(255,149,0,0.06)',
-        border: '1px solid rgba(255,149,0,0.2)', borderRadius: 8,
-        fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#FF9500', lineHeight: 1.6,
-      }}>
-        This saves your token draft. Actual on-chain deployment will be available in Phase 3. Your wallet connection will be required to deploy.
+      <div style={{ padding: '12px 16px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#00FF88', lineHeight: 1.6 }}>
+        Your token will be saved and ready to deploy. Connect your wallet on the next step to deploy on-chain.
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <GhostBtn onClick={onBack}>Back</GhostBtn>
         <PrimaryBtn onClick={onSave} loading={saving}>
           <IconRocket size={14} color="#0A0A0F" />
-          {saving ? 'Saving Draft...' : 'Save Draft'}
+          {saving ? 'Saving...' : 'Save & Go to Deploy'}
         </PrimaryBtn>
       </div>
     </div>
@@ -638,7 +633,7 @@ function LaunchPageContent() {
         narrative_id: narrativeId || null,
       })
       if (res.data.success) {
-        router.push('/dashboard')
+        router.push('/dashboard/tokens')
       }
     } catch (err: any) {
       setError(err.message)

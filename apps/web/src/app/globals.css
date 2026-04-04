@@ -352,3 +352,66 @@ body::before {
   .page-title { font-size: 18px; }
   .dashboard-main { padding: 10px 10px 40px; }
 }
+
+/* ── Landing Page Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Landing nav */
+  .landing-nav-links { display: none !important; }
+  .landing-nav-cta   { display: none !important; }
+
+  /* Hero */
+  .hero-section { padding: 100px 20px 60px !important; }
+  .hero-badge   { font-size: 10px !important; }
+
+  /* Feature grids - 2 col on mobile */
+  .feature-showcase-grid {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+
+  /* How it works - stack */
+  .how-grid {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+
+  /* Pricing - single column */
+  .pricing-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Chain cards - stack */
+  .chain-grid {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+}
+
+/* ── Add back button to all sub-pages ────────────────────────────────────── */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #6B7280;
+  padding: 0;
+  margin-bottom: 16px;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.back-btn:hover { color: #F9FAFB; }
+
+/* ── Wallet connect for mobile/TG ────────────────────────────────────────── */
+.wallet-guard-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 24px;
+  text-align: center;
+}

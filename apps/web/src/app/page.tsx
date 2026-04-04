@@ -342,14 +342,14 @@ export default function LandingPage() {
           </div>
 
           {/* Feature 1 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center', marginBottom: 100 }}>
+          <div className="feature-showcase-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center', marginBottom: 100 }}>
             <div>
               <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 14 }}>01 — Narrative Intelligence</div>
               <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(24px, 3vw, 34px)', fontWeight: 900, color: '#F9FAFB', letterSpacing: '-0.8px', marginBottom: 16, lineHeight: 1.2 }}>
                 Know what's trending before everyone else does
               </h3>
               <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', lineHeight: 1.8, marginBottom: 24 }}>
-                Live narrative feed pulls signals from Reddit, Google Trends, and many more sources every 30 minutes. Each narrative is scored 0-100 by hype velocity. First mover wins.
+                Live narrative feed pulls signals from Reddit, DexScreener, CoinGecko and Google Trends every 30 minutes. Each narrative is scored 0-100 by hype velocity. First mover wins.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {['Reddit + DexScreener + CoinGecko signals', 'Hype score updated every 30 minutes', 'AI ticker suggestions per narrative'].map(f => (
@@ -364,7 +364,7 @@ export default function LandingPage() {
           </div>
 
           {/* Feature 2 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center', marginBottom: 100 }}>
+          <div className="feature-showcase-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center', marginBottom: 100 }}>
             <DeployDemo />
             <div>
               <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 14 }}>02 — One-Click Deploy</div>
@@ -386,7 +386,7 @@ export default function LandingPage() {
           </div>
 
           {/* Feature 3 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+          <div className="feature-showcase-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
             <div>
               <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 14 }}>03 — Post-Launch Intelligence</div>
               <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(24px, 3vw, 34px)', fontWeight: 900, color: '#F9FAFB', letterSpacing: '-0.8px', marginBottom: 16, lineHeight: 1.2 }}>
@@ -422,7 +422,7 @@ export default function LandingPage() {
 
       {/* ── How it works ─────────────────────────────────────────────── */}
       <section id="how" style={{ padding: '100px 24px', background: '#0E0E16', borderTop: '1px solid #1E1E2E', borderBottom: '1px solid #1E1E2E' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
+        <div className="how-grid" style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
           <div>
             <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>How It Works</div>
             <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 900, color: '#F9FAFB', letterSpacing: '-0.8px', marginBottom: 16 }}>
@@ -464,7 +464,7 @@ export default function LandingPage() {
           <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 900, color: '#F9FAFB', letterSpacing: '-0.8px', marginBottom: 48 }}>
             Deploy anywhere degens live
           </h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 48 }}>
+          <div className="chain-grid" style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 48 }}>
             {[
               { Logo: BSCLogo,     name: 'BNB Smart Chain', color: '#F0B90B', dex: 'PancakeSwap', speed: 'Fast · Low fees',       status: 'Live' },
               { Logo: SolanaLogo,  name: 'Solana',          color: '#9945FF', dex: 'Jupiter',     speed: 'Instant · Ultra cheap', status: 'Live' },
@@ -502,7 +502,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+          <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             {[
               {
                 id: 'free', name: 'Free', price: '$0', color: '#6B7280', border: '#1E1E2E', badge: null, launches: '1 token launch',
