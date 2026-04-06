@@ -86,7 +86,7 @@ export default function TokenPage() {
   const draft = token.token_drafts
   const market = token.market_data
   const explorerBase = token.chain === 'bsc'
-    ? 'https://testnet.bscscan.com/token/'
+    ? 'https://bscscan.com/token/'
     : 'https://solscan.io/token/'
 
   return (

@@ -36,20 +36,20 @@ const BSC_CHAINS = {
   },
 }
 
-function getChainConfig(network = 'testnet') {
-  return BSC_CHAINS[network] || BSC_CHAINS.testnet
+function getChainConfig(network = 'mainnet') {
+  return BSC_CHAINS[network] || BSC_CHAINS.mainnet
 }
 
 // ── Provider + Signer setup ───────────────────────────────────────────────────
 // Provider: read-only connection to the blockchain
 // Signer: a wallet that can sign and send transactions
 
-function getProvider(network = 'testnet') {
+function getProvider(network = 'mainnet') {
   const config = getChainConfig(network)
   return new ethers.JsonRpcProvider(config.rpc)
 }
 
-function getPlatformSigner(network = 'testnet') {
+function getPlatformSigner(network = 'mainnet') {
   // The platform private key is used to:
   // 1. Deploy the factory (one time only)
   // 2. NOT used for user token deployments — users sign those themselves
@@ -68,7 +68,7 @@ function getPlatformSigner(network = 'testnet') {
 // This deploys the OnelaunchFactory contract to BSC testnet.
 // You only do this ONCE. After that, save the factory address in .env.
 
-async function deployFactory(network = 'testnet') {
+async function deployFactory(network = 'mainnet') {
   console.log(`[BSC] Deploying factory to ${network}...`)
 
   const signer = getPlatformSigner(network)
@@ -103,7 +103,7 @@ async function deployFactory(network = 'testnet') {
 
 // ── Get factory contract instance ─────────────────────────────────────────────
 
-function getFactory(network = 'testnet', signerOrProvider = null) {
+function getFactory(network = 'mainnet', signerOrProvider = null) {
   const config = getChainConfig(network)
 
   if (!config.factoryAddress) {
@@ -123,7 +123,7 @@ async function deployTokenServerSide({
   symbol,
   totalSupply,
   ownerAddress,
-  network = 'testnet',
+  network = 'mainnet',
 }) {
   console.log(`[BSC] Deploying token: ${name} ($${symbol}) for ${ownerAddress}`)
 
@@ -197,7 +197,7 @@ async function deployTokenServerSide({
 
 // ── Verify token exists on-chain ──────────────────────────────────────────────
 
-async function verifyToken(tokenAddress, network = 'testnet') {
+async function verifyToken(tokenAddress, network = 'mainnet') {
   try {
     const { TOKEN_ABI } = require('../../../../../contracts/src/abi')
     const provider = getProvider(network)

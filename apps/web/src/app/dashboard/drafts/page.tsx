@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { useAccount } from 'wagmi'
 import { TokenLogo } from '@/components/launch/TokenLogo'
 import { IconRocket, IconChevronRight, IconBSC, IconSolana, IconClock } from '@/components/ui/Icons'
 

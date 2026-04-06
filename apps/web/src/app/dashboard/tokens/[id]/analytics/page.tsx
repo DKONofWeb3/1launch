@@ -14,7 +14,7 @@ function shortAddr(addr: string) {
 function ExplorerLink({ address, chain }: { address: string; chain: string }) {
   const base = chain === 'solana'
     ? `https://solscan.io/account/${address}`
-    : `https://testnet.bscscan.com/address/${address}`
+    : `https://bscscan.com/address/${address}`
   return (
     <a
       href={base}

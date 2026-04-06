@@ -113,7 +113,7 @@ export default function BotPage() {
         token_id: params.id,
         chain:    token.chain,
         tier:     selectedTier,
-        network:  'testnet',
+        network:  'mainnet',
       })
       if (!res.data.success) throw new Error(res.data.error)
       const newSession = res.data.data

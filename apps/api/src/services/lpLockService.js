@@ -96,13 +96,13 @@ const FACTORY_ABI = [
   },
 ]
 
-async function getLPTokenAddress(tokenAddress, network = 'testnet') {
+async function getLPTokenAddress(tokenAddress, network = 'mainnet') {
   try {
-    const rpcUrl     = network === 'testnet'
-      ? (process.env.BSC_TESTNET_RPC || 'https://bsc-testnet-rpc.publicnode.com')
+    const rpcUrl     = network === 'mainnet'
+      ? (process.env.BSC_TESTNET_RPC || 'https://bsc-dataseed1.binance.org')
       : (process.env.BSC_MAINNET_RPC || 'https://bsc-dataseed1.binance.org')
-    const factory    = network === 'testnet' ? PANCAKE_FACTORY_TESTNET : PANCAKE_FACTORY_MAINNET
-    const wbnb       = network === 'testnet' ? WBNB_TESTNET : WBNB_MAINNET
+    const factory    = network === 'mainnet' ? PANCAKE_FACTORY_TESTNET : PANCAKE_FACTORY_MAINNET
+    const wbnb       = network === 'mainnet' ? WBNB_TESTNET : WBNB_MAINNET
 
     const provider   = new ethers.JsonRpcProvider(rpcUrl)
     const contract   = new ethers.Contract(factory, FACTORY_ABI, provider)
@@ -118,10 +118,10 @@ async function getLPTokenAddress(tokenAddress, network = 'testnet') {
   }
 }
 
-async function getLPBalance(lpTokenAddress, walletAddress, network = 'testnet') {
+async function getLPBalance(lpTokenAddress, walletAddress, network = 'mainnet') {
   try {
-    const rpcUrl   = network === 'testnet'
-      ? (process.env.BSC_TESTNET_RPC || 'https://bsc-testnet-rpc.publicnode.com')
+    const rpcUrl   = network === 'mainnet'
+      ? (process.env.BSC_TESTNET_RPC || 'https://bsc-dataseed1.binance.org')
       : (process.env.BSC_MAINNET_RPC || 'https://bsc-dataseed1.binance.org')
     const provider = new ethers.JsonRpcProvider(rpcUrl)
     const lp       = new ethers.Contract(lpTokenAddress, LP_TOKEN_ABI, provider)
@@ -139,7 +139,7 @@ async function getLPBalance(lpTokenAddress, walletAddress, network = 'testnet') 
 }
 
 // ── Get existing locks for a wallet + LP token via Unicrypt API ───────────────
-async function getExistingLocks(walletAddress, lpTokenAddress, network = 'testnet') {
+async function getExistingLocks(walletAddress, lpTokenAddress, network = 'mainnet') {
   try {
     // Unicrypt has a public API to query locks
     const apiBase = network === 'mainnet'
@@ -163,8 +163,8 @@ async function getExistingLocks(walletAddress, lpTokenAddress, network = 'testne
 
 async function getLocksOnChain(walletAddress, lpTokenAddress, network) {
   try {
-    const rpcUrl   = network === 'testnet'
-      ? (process.env.BSC_TESTNET_RPC || 'https://bsc-testnet-rpc.publicnode.com')
+    const rpcUrl   = network === 'mainnet'
+      ? (process.env.BSC_TESTNET_RPC || 'https://bsc-dataseed1.binance.org')
       : (process.env.BSC_MAINNET_RPC || 'https://bsc-dataseed1.binance.org')
     const locker   = network === 'mainnet' ? UNICRYPT_LOCKER_MAINNET : UNICRYPT_LOCKER_TESTNET
     const provider = new ethers.JsonRpcProvider(rpcUrl)

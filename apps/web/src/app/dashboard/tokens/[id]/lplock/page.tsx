@@ -236,7 +236,7 @@ export default function LPLockPage() {
           </div>
           {txHash && (
             <a
-              href={`https://testnet.bscscan.com/tx/${txHash}`}
+              href={`https://bscscan.com/tx/${txHash}`}
               target="_blank" rel="noreferrer"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 600, color: '#00FF88', textDecoration: 'none' }}
             >
@@ -387,7 +387,7 @@ export default function LPLockPage() {
               <div>
                 <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', marginBottom: 2 }}>TX</div>
                 <a
-                  href={`https://testnet.bscscan.com/tx/${lock.tx_hash}`}
+                  href={`https://bscscan.com/tx/${lock.tx_hash}`}
                   target="_blank" rel="noreferrer"
                   style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#00FF88', textDecoration: 'none' }}
                 >

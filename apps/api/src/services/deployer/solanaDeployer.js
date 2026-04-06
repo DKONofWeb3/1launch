@@ -50,29 +50,30 @@ const {
 
 // ── Connection setup ──────────────────────────────────────────────────────────
 
-function getConnection(network = 'devnet') {
+function getConnection(network = 'mainnet') {
   const endpoints = {
     devnet:  clusterApiUrl('devnet'),
     mainnet: process.env.HELIUS_SOLANA_URL || clusterApiUrl('mainnet-beta'),
   }
-  return new Connection(endpoints[network] || endpoints.devnet, 'confirmed')
+  return new Connection(endpoints[network] || endpoints.mainnet, 'confirmed')
 }
 
 // ── Platform wallet (payer) ───────────────────────────────────────────────────
 // For server-side testing only. In production the user's wallet pays.
+
 function getPlatformKeypair() {
   const key = process.env.SOLANA_PLATFORM_PRIVATE_KEY
   if (!key) throw new Error('SOLANA_PLATFORM_PRIVATE_KEY not set')
-
+  // Key is stored as base58 or JSON array in .env
   try {
     const parsed = JSON.parse(key)
     return Keypair.fromSecretKey(Uint8Array.from(parsed))
   } catch {
-    const bs58 = require('bs58')
-    const decoder = bs58.default?.decode ?? bs58.decode
-    return Keypair.fromSecretKey(decoder(key))
+    const { decode } = require('bs58')
+    return Keypair.fromSecretKey(decode(key))
   }
 }
+
 // ── Deploy SPL Token ──────────────────────────────────────────────────────────
 
 async function deployTokenServerSide({
@@ -82,7 +83,7 @@ async function deployTokenServerSide({
   ownerAddress,
   decimals = 9,        // Solana standard is 9 decimals (vs 18 on EVM)
   disableMinting = true, // Remove mint authority after deploy (prevents inflation)
-  network = 'devnet',
+  network = 'mainnet',
 }) {
   console.log(`[Solana] Creating token: ${name} ($${symbol}) for ${ownerAddress}`)
 
@@ -197,21 +198,21 @@ async function deployTokenServerSide({
 
   const explorerBase = network === 'mainnet'
     ? 'https://solscan.io'
-    : 'https://solscan.io/?cluster=devnet'
+    : 'https://solscan.io/'
 
   return {
     contractAddress: mintKeypair.publicKey.toBase58(), // "Mint address" on Solana
     txHash:          signature,
     ownerATA:        ownerATA.toBase58(),
-    explorerUrl:     `https://solscan.io/token/${mintKeypair.publicKey.toBase58()}${network !== 'mainnet' ? '?cluster=devnet' : ''}`,
-    txUrl:           `https://solscan.io/tx/${signature}${network !== 'mainnet' ? '?cluster=devnet' : ''}`,
+    explorerUrl:     `https://solscan.io/token/${mintKeypair.publicKey.toBase58()}${network !== 'mainnet' ? '' : ''}`,
+    txUrl:           `https://solscan.io/tx/${signature}${network !== 'mainnet' ? '' : ''}`,
     network,
   }
 }
 
 // ── Verify token on-chain ─────────────────────────────────────────────────────
 
-async function verifyToken(mintAddress, network = 'devnet') {
+async function verifyToken(mintAddress, network = 'mainnet') {
   try {
     const { getMint } = require('@solana/spl-token')
     const connection = getConnection(network)

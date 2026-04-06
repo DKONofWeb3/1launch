@@ -38,7 +38,7 @@ lplockRouter.get('/:tokenId/info', async (req, res) => {
       })
     }
 
-    const network = token.network || 'testnet'
+    const network = token.network || 'mainnet'
 
     // Find LP pair address
     const lpTokenAddress = await getLPTokenAddress(token.contract_address, network)

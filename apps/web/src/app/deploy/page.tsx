@@ -177,8 +177,8 @@ function useBSCDeploy() {
     return {
       contractAddress: tokenAddress || receipt.transactionHash,
       txHash,
-      explorerUrl: `https://testnet.bscscan.com/token/${tokenAddress}`,
-      txUrl: `https://testnet.bscscan.com/tx/${txHash}`,
+      explorerUrl: `https://bscscan.com/token/${tokenAddress}`,
+      txUrl: `https://bscscan.com/tx/${txHash}`,
     }
   }
 
@@ -223,12 +223,12 @@ function DeployPageContent() {
 
       if (chain === 'bsc') {
         // Use server-side deploy if no wallet connected or no factory address
-        if (!config?.factoryAddress || config?.network === 'testnet') {
+        if (!config?.factoryAddress || !bscAddress) {
           setStatus('pending')
           const res = await api.post('/api/deploy/server-side', {
             draft_id: draftId,
             chain: 'bsc',
-            network: 'testnet',
+            network: 'mainnet',
           })
           if (!res.data.success) throw new Error(res.data.error)
           setStatus('success')
@@ -244,21 +244,7 @@ function DeployPageContent() {
         setStatus('waiting_wallet')
         deployResult = await deployBSC(draft, config.factoryAddress)
       } else {
-       setStatus('pending')
-const res = await api.post('/api/deploy/server-side', {
-  draft_id: draftId,
-  chain: 'solana',
-  network: 'devnet',
-})
-if (!res.data.success) throw new Error(res.data.error)
-setStatus('success')
-setResult({
-  contractAddress: res.data.data.contract_address,
-  txHash: res.data.data.tx_hash,
-  explorerUrl: res.data.data.explorerUrl || '#',
-  txUrl: res.data.data.txUrl || '#',
-})
-return
+        throw new Error('Solana frontend deploy coming in next update — use BSC for now')
       }
 
       setStatus('confirming')
@@ -482,13 +468,6 @@ return
   )
 }
 
-function ChainAwareWallet() {
-  const searchParams = useSearchParams()
-  const chain = searchParams.get('chain')
-  if (chain === 'solana') return null
-  return <ConnectButton showBalance={false} accountStatus="avatar" chainStatus="icon" />
-}
-
 export default function DeployPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0A0A0F' }}>
@@ -502,11 +481,9 @@ export default function DeployPage() {
         <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 800, color: '#F9FAFB' }}>
           1launch
         </span>
-       <div style={{ width: 120, display: 'flex', justifyContent: 'flex-end' }}>
-  <Suspense fallback={null}>
-    <ChainAwareWallet />
-  </Suspense>
-</div>
+        <div style={{ width: 120, display: 'flex', justifyContent: 'flex-end' }}>
+          <ConnectButton showBalance={false} accountStatus="avatar" chainStatus="icon" />
+        </div>
       </div>
 
       <Suspense fallback={

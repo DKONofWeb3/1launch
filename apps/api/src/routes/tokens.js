@@ -64,30 +64,36 @@ tokenRouter.get('/launched', async (req, res) => {
 
 module.exports = { tokenRouter }
 
-// GET /api/tokens/drafts — get all drafts (for testing; production gates by wallet)
+// GET /api/tokens/drafts?wallet=0x... — strict wallet required
 tokenRouter.get('/drafts', async (req, res) => {
   try {
     const { wallet } = req.query
 
-    let query = supabase
+    // Strict: no wallet = no drafts
+    if (!wallet) {
+      return res.json({ success: true, data: [] })
+    }
+
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', wallet.toLowerCase())
+      .single()
+      .catch(() => ({ data: null }))
+
+    if (!user) {
+      return res.json({ success: true, data: [] })
+    }
+
+    const { data, error } = await supabase
       .from('token_drafts')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50)
 
-    if (wallet) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', wallet.toLowerCase())
-        .single()
-
-      if (user) query = query.eq('user_id', user.id)
-    }
-
-    const { data, error } = await query
     if (error) throw error
-    res.json({ success: true, data })
+    res.json({ success: true, data: data || [] })
   } catch (err) {
     res.status(500).json({ success: false, error: err.message })
   }
