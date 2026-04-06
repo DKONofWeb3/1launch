@@ -8,7 +8,6 @@ const { runAuditScan } = require('../services/auditService')
 const launchedTokensRouter = Router()
 
 // GET /api/launched-tokens?wallet=0x...
-// Strict: returns empty if no wallet provided
 launchedTokensRouter.get('/', async (req, res) => {
   try {
     const { wallet } = req.query
@@ -18,41 +17,73 @@ launchedTokensRouter.get('/', async (req, res) => {
     }
 
     // Look up user by wallet
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
       .eq('wallet_address', wallet.toLowerCase())
-      .single()
-      .catch(() => ({ data: null }))
+      .maybeSingle()
+
+    if (userError) {
+      console.error('[launched-tokens] user lookup error:', userError.message)
+      return res.json({ success: true, data: [] })
+    }
 
     if (!user) {
       return res.json({ success: true, data: [] })
     }
 
+    // Select only columns we know exist — no audit_risk
     const { data: tokens, error } = await supabase
       .from('launched_tokens')
       .select(`
-        *,
+        id,
+        contract_address,
+        chain,
+        network,
+        tx_hash,
+        launched_at,
+        user_id,
+        draft_id,
         token_drafts (
-          name, ticker, logo_url, description,
-          total_supply, tax_buy, tax_sell,
-          lp_lock, renounce, chain
+          name,
+          ticker,
+          logo_url,
+          description,
+          total_supply,
+          tax_buy,
+          tax_sell,
+          lp_lock,
+          renounce,
+          chain
         )
       `)
       .eq('user_id', user.id)
       .order('launched_at', { ascending: false })
       .limit(50)
 
-    if (error) throw error
+    if (error) {
+      console.error('[launched-tokens] query error:', error.message)
+      throw error
+    }
+
     if (!tokens || tokens.length === 0) {
       return res.json({ success: true, data: [] })
     }
 
-    // Fetch market data per token (sequential to avoid DexScreener rate limits)
+    // Fetch market data per token — never throws
     const withMarket = []
     for (const token of tokens) {
-      const market = await getTokenData(token.contract_address, token.chain).catch(() => null)
-      withMarket.push({ ...token, market_data: market || null })
+      let market = null
+      try {
+        market = await getTokenData(token.contract_address, token.chain)
+      } catch {}
+      withMarket.push({
+        ...token,
+        audit_scan_done: false,
+        tg_setup_done:   false,
+        volume_bot_tier: 'none',
+        market_data:     market || null,
+      })
     }
 
     res.json({ success: true, data: withMarket })
@@ -67,16 +98,34 @@ launchedTokensRouter.get('/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('launched_tokens')
-      .select(`*, token_drafts(*)`)
+      .select(`
+        id, contract_address, chain, network, tx_hash, launched_at, user_id, draft_id,
+        token_drafts(*)
+      `)
       .eq('id', req.params.id)
-      .single()
+      .maybeSingle()
 
-    if (error || !data) {
+    if (error) {
+      console.error('[launched-tokens/:id] query error:', error.message)
+      return res.status(500).json({ success: false, error: error.message })
+    }
+    if (!data) {
       return res.status(404).json({ success: false, error: 'Token not found' })
     }
 
-    const market = await getTokenData(data.contract_address, data.chain).catch(() => null)
-    res.json({ success: true, data: { ...data, market_data: market } })
+    let market = null
+    try { market = await getTokenData(data.contract_address, data.chain) } catch {}
+
+    res.json({
+      success: true,
+      data: {
+        ...data,
+        audit_scan_done: false,
+        tg_setup_done:   false,
+        volume_bot_tier: 'none',
+        market_data:     market,
+      }
+    })
   } catch (err) {
     console.error('[GET /launched-tokens/:id]', err.message)
     res.status(500).json({ success: false, error: err.message })
@@ -90,14 +139,14 @@ launchedTokensRouter.post('/:id/audit', async (req, res) => {
       .from('launched_tokens')
       .select('contract_address, chain')
       .eq('id', req.params.id)
-      .single()
+      .maybeSingle()
 
     if (!token) return res.status(404).json({ success: false, error: 'Token not found' })
 
     const audit = await runAuditScan(token.contract_address, token.chain)
-    await supabase.from('launched_tokens').update({ audit_scan_done: true }).eq('id', req.params.id)
     res.json({ success: true, data: audit })
   } catch (err) {
+    console.error('[POST /launched-tokens/:id/audit]', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })
