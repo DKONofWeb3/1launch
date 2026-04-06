@@ -29,8 +29,7 @@ subscriptionsRouter.get('/me', async (req, res) => {
       .from('users')
       .select('id')
       .eq('wallet_address', wallet.toLowerCase())
-      .single()
-      .catch(() => ({ data: null }))
+      .maybeSingle()
 
     if (!user) return res.json({ success: true, data: { plan: PLANS.free, subscription: null } })
 
@@ -38,8 +37,7 @@ subscriptionsRouter.get('/me', async (req, res) => {
       .from('subscriptions')
       .select('*')
       .eq('user_id', user.id)
-      .single()
-      .catch(() => ({ data: null }))
+      .maybeSingle()
 
     const isActive = sub && sub.status === 'active' && new Date(sub.expires_at) > new Date()
     const planId   = isActive ? sub.plan_id : 'free'
@@ -72,20 +70,35 @@ subscriptionsRouter.post('/initiate', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid plan or free plan selected' })
     }
 
+    // Check platform wallet is configured
+    const platformWallet = chain === 'solana'
+      ? process.env.SOLANA_PLATFORM_WALLET_ADDRESS
+      : process.env.PLATFORM_WALLET_ADDRESS
+
+    if (!platformWallet) {
+      return res.status(503).json({
+        success: false,
+        error: 'Payment wallet not configured. Contact support.',
+      })
+    }
+
     // Get or create user
     let { data: user } = await supabase
       .from('users')
       .select('id')
       .eq('wallet_address', wallet.toLowerCase())
-      .single()
-      .catch(() => ({ data: null }))
+      .maybeSingle()
 
     if (!user) {
-      const { data: newUser } = await supabase
+      const { data: newUser, error: userErr } = await supabase
         .from('users')
-        .insert({ wallet_address: wallet.toLowerCase(), created_at: new Date().toISOString() })
+        .insert({ wallet_address: wallet.toLowerCase(), plan: 'free', created_at: new Date().toISOString() })
         .select('id')
         .single()
+        .catch(() => ({ data: null, error: null }))
+      if (!newUser) {
+        return res.status(500).json({ success: false, error: 'Failed to create user record' })
+      }
       user = newUser
     }
 
@@ -138,8 +151,7 @@ subscriptionsRouter.get('/history', async (req, res) => {
       .from('users')
       .select('id')
       .eq('wallet_address', wallet.toLowerCase())
-      .single()
-      .catch(() => ({ data: null }))
+      .maybeSingle()
 
     if (!user) return res.json({ success: true, data: [] })
 
@@ -167,8 +179,7 @@ subscriptionsRouter.post('/cancel', async (req, res) => {
       .from('users')
       .select('id')
       .eq('wallet_address', wallet.toLowerCase())
-      .single()
-      .catch(() => ({ data: null }))
+      .maybeSingle()
 
     if (!user) return res.status(404).json({ success: false, error: 'User not found' })
 

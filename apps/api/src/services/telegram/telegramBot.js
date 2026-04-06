@@ -163,8 +163,7 @@ function setupHandlers(bot) {
         .from('users')
         .select('id')
         .eq('telegram_chat_id', chatId)
-        .single()
-        .catch(() => ({ data: null }))
+        .maybeSingle()
 
       if (!user) {
         const appUrl = getAppUrl()

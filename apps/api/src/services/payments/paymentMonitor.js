@@ -83,8 +83,7 @@ async function activateSubscription(userId, planId, paymentId, txHash) {
     .from('subscriptions')
     .select('id')
     .eq('user_id', userId)
-    .single()
-    .catch(() => ({ data: null }))
+    .maybeSingle()
 
   if (existing) {
     await supabase

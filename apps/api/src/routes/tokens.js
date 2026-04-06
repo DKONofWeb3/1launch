@@ -78,8 +78,7 @@ tokenRouter.get('/drafts', async (req, res) => {
       .from('users')
       .select('id')
       .eq('wallet_address', wallet.toLowerCase())
-      .single()
-      .catch(() => ({ data: null }))
+      .maybeSingle()
 
     if (!user) {
       return res.json({ success: true, data: [] })

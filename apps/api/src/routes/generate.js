@@ -108,26 +108,48 @@ generateRouter.post('/regenerate-field', async (req, res) => {
 generateRouter.post('/save-draft', async (req, res) => {
   try {
     const draft = req.body
+    const wallet = draft.wallet_address?.toLowerCase() || null
+
+    // Find or create user if wallet provided
+    let userId = null
+    if (wallet) {
+      let { data: user } = await supabase
+        .from('users')
+        .select('id')
+        .eq('wallet_address', wallet)
+        .maybeSingle()
+
+      if (!user) {
+        const { data: newUser } = await supabase
+          .from('users')
+          .insert({ wallet_address: wallet, plan: 'free' })
+          .select('id')
+          .maybeSingle()
+        user = newUser
+      }
+      userId = user?.id || null
+    }
 
     const { data, error } = await supabase
       .from('token_drafts')
       .insert({
-        narrative_id: draft.narrative_id || null,
-        name: draft.name,
-        ticker: draft.ticker,
-        description: draft.description,
-        logo_url: draft.logo_url,
-        chain: draft.chain,
-        total_supply: draft.total_supply || '1000000000',
-        tax_buy: draft.tax_buy || 0,
-        tax_sell: draft.tax_sell || 0,
+        user_id:          userId,
+        narrative_id:     draft.narrative_id || null,
+        name:             draft.name,
+        ticker:           draft.ticker,
+        description:      draft.description,
+        logo_url:         draft.logo_url,
+        chain:            draft.chain,
+        total_supply:     draft.total_supply || '1000000000',
+        tax_buy:          draft.tax_buy || 0,
+        tax_sell:         draft.tax_sell || 0,
         launch_mechanism: draft.launch_mechanism || 'fair_launch',
-        lp_lock: draft.lp_lock ?? true,
-        renounce: draft.renounce ?? false,
-        tg_bio: draft.tg_bio || '',
-        twitter_bio: draft.twitter_bio || '',
-        first_tweets: draft.first_tweets || [],
-        status: 'draft',
+        lp_lock:          draft.lp_lock ?? true,
+        renounce:         draft.renounce ?? false,
+        tg_bio:           draft.tg_bio || '',
+        twitter_bio:      draft.twitter_bio || '',
+        first_tweets:     draft.first_tweets || [],
+        status:           'draft',
       })
       .select()
       .single()
@@ -135,6 +157,7 @@ generateRouter.post('/save-draft', async (req, res) => {
     if (error) throw error
     res.json({ success: true, data })
   } catch (err) {
+    console.error('[save-draft]', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })
