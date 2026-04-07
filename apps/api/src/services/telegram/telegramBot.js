@@ -22,31 +22,57 @@ function getAppUrl() {
 
 function setupHandlers(bot) {
 
-  // /start
+  // /start — auto-create TG user session
   bot.start(async (ctx) => {
-    const name = ctx.from.first_name || 'degen'
-    const appUrl = getAppUrl()
+    const tgId       = String(ctx.from.id)
+    const tgUsername = ctx.from.username || null
+    const name       = ctx.from.first_name || 'degen'
+    const appUrl     = getAppUrl()
 
-    let text =
+    // Upsert user with telegram identity
+    try {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('telegram_id', tgId)
+        .maybeSingle()
+
+      if (!existing) {
+        await supabase
+          .from('users')
+          .insert({
+            telegram_id:       tgId,
+            telegram_username: tgUsername,
+            plan:              'free',
+            created_at:        new Date().toISOString(),
+          })
+        console.log(`[TG] New user: ${tgUsername || tgId}`)
+      } else {
+        // Update username in case it changed
+        if (tgUsername) {
+          await supabase
+            .from('users')
+            .update({ telegram_username: tgUsername })
+            .eq('telegram_id', tgId)
+        }
+      }
+    } catch (err) {
+      console.warn('[TG] User upsert failed:', err.message)
+    }
+
+    const launchUrl = appUrl ? `${appUrl}/dashboard` : null
+
+    await ctx.reply(
       `gm ${name}.\n\n` +
       `1launch — AI-powered memecoin launcher.\n` +
       `Narrative to token in under 5 minutes.\n\n` +
-      `Commands:\n` +
-      `/narratives — top trending narratives\n` +
-      `/timing — launch timing analysis\n` +
-      `/token <address> <chain> — token price data\n` +
+      `/narratives — trending narratives\n` +
       `/mytoken — your launched tokens\n` +
-      `/alerts — manage price alerts\n` +
-      `/subscribe — upgrade your plan`
-
-    if (appUrl) text += `\n\nApp: ${appUrl}`
-
-    await ctx.reply(
-      text,
+      `/subscribe — upgrade plan\n` +
+      (launchUrl ? `\nLaunch: ${launchUrl}` : ''),
       Markup.keyboard([
-        ['Narratives', 'Timing'],
-        ['My Tokens', 'Subscribe'],
-        ['Open App'],
+        ['Narratives', 'My Tokens'],
+        ['Subscribe', 'Launch Token'],
       ]).resize()
     )
   })
@@ -201,6 +227,20 @@ function setupHandlers(bot) {
     } catch {
       ctx.reply('Failed to fetch your tokens.')
     }
+  })
+
+  // Launch Token — sends link to launch page
+  bot.hears(['Launch Token', '/launch'], async (ctx) => {
+    const appUrl = getAppUrl()
+    if (!appUrl) {
+      return ctx.reply('Launch platform not available. Try again later.')
+    }
+    await ctx.reply(
+      'Choose a narrative from the feed and launch your token in under 2 minutes.',
+      Markup.inlineKeyboard([
+        [Markup.button.url('Open Launch Platform', `${appUrl}/dashboard`)],
+      ])
+    )
   })
 
   // Subscribe

@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
+import { useRouter } from 'next/navigation'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { api } from '@/lib/api'
 
@@ -319,9 +320,26 @@ export default function PricingPage() {
       .catch(() => {})
   }, [address])
 
+  const router = useRouter()
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0A0A0F', padding: '60px 24px 80px' }}>
+    <div style={{ minHeight: '100vh', background: '#0A0A0F', padding: '24px 24px 80px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        {/* Back button */}
+        <button
+          onClick={() => router.back()}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontFamily: 'IBM Plex Mono, monospace', fontSize: 12,
+            color: '#6B7280', padding: '0 0 24px 0',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          Back
+        </button>
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
@@ -409,13 +427,13 @@ export default function PricingPage() {
                 }}
                 disabled={currentPlan === plan.id}
                 style={{
-  padding: '11px 0', borderRadius: 8, cursor: plan.price === 0 || currentPlan === plan.id ? 'default' : 'pointer',
-  background: currentPlan === plan.id ? '#1E1E2E' : plan.price === 0 ? '#1E1E2E' : plan.color === '#00FF88' ? '#00FF88' : `${plan.color}20`,
-  border: currentPlan !== plan.id && plan.price > 0 ? `1px solid ${plan.color}40` : '1px solid transparent',
-  fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700,
-  color: plan.color === '#00FF88' && currentPlan !== plan.id && plan.price > 0 ? '#0A0A0F' : plan.color === '#6B7280' ? '#4B5563' : currentPlan === plan.id ? '#4B5563' : plan.color,
-  transition: 'all 0.15s',
-}}
+                  padding: '11px 0', borderRadius: 8, border: 'none', cursor: plan.price === 0 || currentPlan === plan.id ? 'default' : 'pointer',
+                  background: currentPlan === plan.id ? '#1E1E2E' : plan.price === 0 ? '#1E1E2E' : plan.color === '#00FF88' ? '#00FF88' : `${plan.color}20`,
+                  border: currentPlan !== plan.id && plan.price > 0 ? `1px solid ${plan.color}40` : '1px solid transparent',
+                  fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700,
+                  color: plan.color === '#00FF88' && currentPlan !== plan.id && plan.price > 0 ? '#0A0A0F' : plan.color === '#6B7280' ? '#4B5563' : currentPlan === plan.id ? '#4B5563' : plan.color,
+                  transition: 'all 0.15s',
+                }}
               >
                 {currentPlan === plan.id ? 'Current Plan' : plan.cta}
               </button>

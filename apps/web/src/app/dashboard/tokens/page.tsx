@@ -29,6 +29,20 @@ export default function TokensPage() {
 
   return (
     <div className="dashboard-layout">
+      <button
+          onClick={() => router.back()}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontFamily: 'IBM Plex Mono, monospace', fontSize: 12,
+            color: '#6B7280', padding: '0 0 4px 0', marginBottom: 8,
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          Back
+        </button>
       <div className="page-header">
         <div>
           <h1 className="page-title">Launched Tokens</h1>
