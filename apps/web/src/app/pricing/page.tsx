@@ -427,9 +427,9 @@ export default function PricingPage() {
                 }}
                 disabled={currentPlan === plan.id}
                 style={{
-                  padding: '11px 0', borderRadius: 8, border: 'none', cursor: plan.price === 0 || currentPlan === plan.id ? 'default' : 'pointer',
+                  padding: '11px 0', borderRadius: 8, cursor: plan.price === 0 || currentPlan === plan.id ? 'default' : 'pointer',
                   background: currentPlan === plan.id ? '#1E1E2E' : plan.price === 0 ? '#1E1E2E' : plan.color === '#00FF88' ? '#00FF88' : `${plan.color}20`,
-                  border: currentPlan !== plan.id && plan.price > 0 ? `1px solid ${plan.color}40` : '1px solid transparent',
+                  border: currentPlan === plan.id ? '1px solid transparent' : plan.price === 0 ? '1px solid transparent' : currentPlan !== plan.id && plan.price > 0 ? `1px solid ${plan.color}40` : '1px solid transparent',
                   fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700,
                   color: plan.color === '#00FF88' && currentPlan !== plan.id && plan.price > 0 ? '#0A0A0F' : plan.color === '#6B7280' ? '#4B5563' : currentPlan === plan.id ? '#4B5563' : plan.color,
                   transition: 'all 0.15s',
