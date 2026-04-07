@@ -65,7 +65,14 @@ subscriptionsRouter.post('/initiate', async (req, res) => {
       return res.status(400).json({ success: false, error: 'plan_id, chain, token, wallet required' })
     }
 
-    const plan = PLANS[plan_id]
+    // Support deploy fee plans dynamically
+    let plan = PLANS[plan_id]
+    if (!plan) {
+      // Check for deploy_fee generic id
+      if (plan_id === 'deploy_fee') {
+        plan = chain === 'solana' ? PLANS['deploy_fee_sol'] : PLANS['deploy_fee_bsc']
+      }
+    }
     if (!plan || plan.price_usd === 0) {
       return res.status(400).json({ success: false, error: 'Invalid plan or free plan selected' })
     }
@@ -190,6 +197,43 @@ subscriptionsRouter.post('/cancel', async (req, res) => {
 
     invalidateCache(user.id)
     res.json({ success: true, message: 'Subscription cancelled. Access remains until expiry date.' })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// GET /api/subscriptions/payment-status/:paymentId
+subscriptionsRouter.get('/payment-status/:paymentId', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id, status, confirmed_at, plan_id, crypto_amount, chain')
+      .eq('id', req.params.paymentId)
+      .maybeSingle()
+
+    if (error || !data) {
+      return res.status(404).json({ success: false, error: 'Payment not found' })
+    }
+
+    res.json({ success: true, data })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// POST /api/subscriptions/confirm-deploy-payment
+// Called manually or by monitor when deploy fee is confirmed
+subscriptionsRouter.post('/confirm-deploy-payment', async (req, res) => {
+  try {
+    const { payment_id, tx_hash } = req.body
+    if (!payment_id) return res.status(400).json({ success: false, error: 'payment_id required' })
+
+    await supabase
+      .from('payments')
+      .update({ status: 'confirmed', confirmed_at: new Date().toISOString(), tx_hash })
+      .eq('id', payment_id)
+
+    res.json({ success: true })
   } catch (err) {
     res.status(500).json({ success: false, error: err.message })
   }

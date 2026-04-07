@@ -1,6 +1,18 @@
 // apps/api/src/config/plans.js
 
 const PLANS = {
+  deploy_fee_bsc: {
+    id:        'deploy_fee_bsc',
+    name:      'BSC Deploy Fee',
+    price_usd: 15,
+    color:     '#F3BA2F',
+  },
+  deploy_fee_sol: {
+    id:        'deploy_fee_sol',
+    name:      'Solana Deploy Fee',
+    price_usd: 6,
+    color:     '#9945FF',
+  },
   free: {
     id:           'free',
     name:         'Free',

@@ -193,12 +193,17 @@ function DeployPageContent() {
   const draftId      = searchParams.get('draft')
   const chain        = searchParams.get('chain') || 'bsc'
 
-  const [draft,   setDraft]   = useState<any>(null)
-  const [config,  setConfig]  = useState<any>(null)
-  const [status,  setStatus]  = useState<DeployStatus>('idle')
-  const [result,  setResult]  = useState<DeployResult | null>(null)
-  const [error,   setError]   = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [draft,          setDraft]          = useState<any>(null)
+  const [config,         setConfig]         = useState<any>(null)
+  const [status,         setStatus]         = useState<DeployStatus>('idle')
+  const [result,         setResult]         = useState<DeployResult | null>(null)
+  const [error,          setError]          = useState<string | null>(null)
+  const [loading,        setLoading]        = useState(true)
+  const [paymentPaid,    setPaymentPaid]    = useState(false)
+  const [paymentData,    setPaymentData]    = useState<any>(null)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [paymentError,   setPaymentError]   = useState<string | null>(null)
+  const [copied,         setCopied]         = useState(false)
 
   const { deploy: deployBSC, address: bscAddress } = useBSCDeploy()
 
@@ -265,6 +270,53 @@ function DeployPageContent() {
       setError(err.message || 'Deploy failed')
     }
   }
+
+  const deployFeeUSD = chain === 'bsc' ? 15 : 6
+
+  async function initiatePayment() {
+    if (!bscAddress && !chain) return
+    setPaymentLoading(true)
+    setPaymentError(null)
+    try {
+      const res = await api.post('/api/subscriptions/initiate', {
+        plan_id: 'deploy_fee',
+        chain:   chain === 'solana' ? 'solana' : 'bsc',
+        token:   chain === 'solana' ? 'SOL' : 'BNB',
+        wallet:  bscAddress || 'tg_user',
+      })
+      if (res.data.success) {
+        setPaymentData(res.data.data)
+      } else {
+        setPaymentError(res.data.error || 'Failed to generate payment address')
+      }
+    } catch (err: any) {
+      setPaymentError(err.message)
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  function copyAddress() {
+    if (!paymentData?.payment_address) return
+    navigator.clipboard.writeText(paymentData.payment_address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Poll for payment confirmation
+  useEffect(() => {
+    if (!paymentData?.id || paymentPaid) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/api/subscriptions/payment-status/${paymentData.id}`)
+        if (res.data.data?.status === 'confirmed') {
+          setPaymentPaid(true)
+          clearInterval(interval)
+        }
+      } catch {}
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [paymentData?.id, paymentPaid])
 
   if (loading) {
     return (
@@ -425,43 +477,126 @@ function DeployPageContent() {
         </div>
       )}
 
-      {/* Deploy button */}
-      {status === 'idle' || status === 'error' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button
-            onClick={handleDeploy}
-            style={{
-              width: '100%', padding: '14px',
-              background: '#00FF88', color: '#0A0A0F',
-              border: 'none', borderRadius: 10,
-              fontFamily: 'IBM Plex Mono, monospace', fontSize: 14, fontWeight: 700,
-              cursor: 'pointer', letterSpacing: '0.04em',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)'
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,255,136,0.3)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'none'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
-          >
-            <IconRocket size={16} color="#0A0A0F" />
-            Deploy {draft.name} on {chain.toUpperCase()}
-          </button>
+      {/* Payment gate + deploy */}
+      {(status === 'idle' || status === 'error') && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-          <p style={{
-            fontFamily: 'IBM Plex Mono, monospace', fontSize: 10,
-            color: '#374151', textAlign: 'center', lineHeight: 1.6,
-          }}>
-            This will open your wallet to sign the transaction.
-            {chain === 'bsc' && ' Deploy fee: ~0.025 BNB + gas.'}
-            {chain === 'solana' && ' Deploy fee: ~0.01 SOL + tx fees.'}
-          </p>
+          {/* Step 1 — Pay deploy fee */}
+          {!paymentPaid && (
+            <div style={{
+              background: '#0E0E16', border: '1px solid #1E1E2E',
+              borderRadius: 12, padding: '18px 20px',
+            }}>
+              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280', letterSpacing: '0.12em', marginBottom: 12 }}>
+                STEP 1 — PAY DEPLOY FEE
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 900, color: '#F9FAFB' }}>
+                  ${deployFeeUSD}
+                </div>
+                <div style={{
+                  padding: '4px 10px',
+                  background: chain === 'bsc' ? 'rgba(243,186,47,0.1)' : 'rgba(153,69,255,0.1)',
+                  border: `1px solid ${chain === 'bsc' ? 'rgba(243,186,47,0.3)' : 'rgba(153,69,255,0.3)'}`,
+                  borderRadius: 6,
+                  fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 700,
+                  color: chain === 'bsc' ? '#F3BA2F' : '#9945FF',
+                }}>
+                  Pay with {chain === 'bsc' ? 'BNB' : 'SOL'}
+                </div>
+              </div>
+
+              {!paymentData ? (
+                <>
+                  {paymentError && (
+                    <div style={{ padding: '8px 12px', background: 'rgba(255,59,59,0.08)', border: '1px solid rgba(255,59,59,0.2)', borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#FF6B6B', marginBottom: 10 }}>
+                      {paymentError}
+                    </div>
+                  )}
+                  <button
+                    onClick={initiatePayment}
+                    disabled={paymentLoading}
+                    style={{
+                      width: '100%', padding: '11px',
+                      background: paymentLoading ? '#1E1E2E' : '#00FF88',
+                      color: '#0A0A0F', border: 'none', borderRadius: 8,
+                      fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700,
+                      cursor: paymentLoading ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {paymentLoading ? 'Generating payment...' : 'Generate Payment Address'}
+                  </button>
+                </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.1em' }}>SEND EXACTLY</div>
+                  <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 900, color: '#00FF88' }}>
+                    {paymentData.crypto_amount} {chain === 'bsc' ? 'BNB' : 'SOL'}
+                  </div>
+                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.1em', marginTop: 4 }}>TO ADDRESS</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ flex: 1, fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#9CA3AF', wordBreak: 'break-all', padding: '8px 10px', background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 6 }}>
+                      {paymentData.payment_address}
+                    </div>
+                    <button onClick={copyAddress} style={{ padding: '8px 12px', background: copied ? 'rgba(0,255,136,0.1)' : 'transparent', border: `1px solid ${copied ? 'rgba(0,255,136,0.3)' : '#1E1E2E'}`, borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: copied ? '#00FF88' : '#6B7280', cursor: 'pointer', flexShrink: 0 }}>
+                      {copied ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563', lineHeight: 1.6 }}>
+                    Send the exact amount above. We detect payment automatically within 2 minutes.
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00FF88', animation: 'pulse 1.5s infinite' }} />
+                    <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280' }}>Listening for payment...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2 — Deploy (unlocked after payment) */}
+          <div style={{ opacity: paymentPaid ? 1 : 0.35, pointerEvents: paymentPaid ? 'auto' : 'none', transition: 'opacity 0.3s' }}>
+            {paymentPaid && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 8, marginBottom: 10 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17l-5-5" stroke="#00FF88" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#00FF88', fontWeight: 600 }}>
+                  Payment confirmed — deploy unlocked
+                </span>
+              </div>
+            )}
+
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280', letterSpacing: '0.12em', marginBottom: 10 }}>
+              {paymentPaid ? 'STEP 2 — DEPLOY' : 'STEP 2 — DEPLOY (pay first)'}
+            </div>
+
+            <button
+              onClick={handleDeploy}
+              disabled={!paymentPaid}
+              style={{
+                width: '100%', padding: '14px',
+                background: paymentPaid ? '#00FF88' : '#1E1E2E',
+                color: paymentPaid ? '#0A0A0F' : '#374151',
+                border: 'none', borderRadius: 10,
+                fontFamily: 'IBM Plex Mono, monospace', fontSize: 14, fontWeight: 700,
+                cursor: paymentPaid ? 'pointer' : 'not-allowed', letterSpacing: '0.04em',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'all 0.15s',
+              }}
+            >
+              <IconRocket size={16} color={paymentPaid ? '#0A0A0F' : '#374151'} />
+              Deploy {draft.name} on {chain.toUpperCase()}
+            </button>
+          </div>
         </div>
-      ) : null}
+      )}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+      `}</style>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
