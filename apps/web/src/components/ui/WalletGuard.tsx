@@ -13,25 +13,45 @@ export function WalletGuard({ children }: { children: React.ReactNode }) {
   const [checked, setChecked]       = useState(false)
 
   useEffect(() => {
-    // Detect Telegram WebApp environment
-    const tg = (window as any).Telegram?.WebApp
-    if (tg?.initDataUnsafe?.user) {
-      const user = tg.initDataUnsafe.user
-      setIsTelegram(true)
-      setTgUser(user)
-      tg.ready()
-      tg.expand()
-      // Store TG session in localStorage for cross-page use
-      localStorage.setItem('tg_user', JSON.stringify(user))
-    } else {
-      // Check if we have a stored TG session
-      const stored = localStorage.getItem('tg_user')
-      if (stored) {
+    function detect() {
+      // Detect Telegram WebApp environment
+      const tg = (window as any).Telegram?.WebApp
+
+      if (tg?.initDataUnsafe?.user) {
+        const user = tg.initDataUnsafe.user
         setIsTelegram(true)
-        setTgUser(JSON.parse(stored))
+        setTgUser(user)
+        try { tg.ready(); tg.expand() } catch {}
+        localStorage.setItem('tg_user', JSON.stringify(user))
+        setChecked(true)
+        return
       }
+
+      // Also check if initData exists even without user (some TG versions)
+      if (tg?.initData && tg.initData.length > 0) {
+        setIsTelegram(true)
+        try { tg.ready(); tg.expand() } catch {}
+        setChecked(true)
+        return
+      }
+
+      // Check stored TG session from previous visit
+      try {
+        const stored = localStorage.getItem('tg_user')
+        if (stored) {
+          setIsTelegram(true)
+          setTgUser(JSON.parse(stored))
+          setChecked(true)
+          return
+        }
+      } catch {}
+
+      setChecked(true)
     }
-    setChecked(true)
+
+    // Small delay to let Telegram SDK fully initialize
+    const timer = setTimeout(detect, 100)
+    return () => clearTimeout(timer)
   }, [])
 
   // Still loading
