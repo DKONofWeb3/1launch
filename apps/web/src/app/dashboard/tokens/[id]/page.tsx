@@ -40,13 +40,12 @@ export default function TokenPage() {
   const [copycatsLoading, setCopycatsLoading] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      api.get(`/api/launched-tokens/${params.id}`),
-      api.get(`/api/launched-tokens/${params.id}/audit`),
-    ]).then(([tokenRes, auditRes]) => {
-      if (tokenRes.data.success) setToken(tokenRes.data.data)
-      if (auditRes.data.success && auditRes.data.data) setAudit(auditRes.data.data)
-    }).finally(() => setLoading(false))
+    api.get(`/api/launched-tokens/${params.id}`)
+      .then(res => {
+        if (res.data.success) setToken(res.data.data)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [params.id])
 
   async function loadCopycats() {

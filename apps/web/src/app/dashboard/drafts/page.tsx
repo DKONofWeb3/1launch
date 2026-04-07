@@ -219,20 +219,21 @@ function EmptyState() {
 
 export default function DraftsPage() {
   const router = useRouter()
+  const { address } = useAccount()
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Fetch all drafts — in production this would be wallet-gated
-    // For now fetches all drafts for testing
-    api.get('/api/tokens/drafts')
+    if (!address) { setLoading(false); return }
+    setLoading(true)
+    api.get(`/api/tokens/drafts?wallet=${address}`)
       .then((res) => {
         if (res.data.success) setDrafts(res.data.data)
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [address])
 
   function handleDeploy(draft: Draft) {
     router.push(`/launch/checklist?draft=${draft.id}&chain=${draft.chain}`)

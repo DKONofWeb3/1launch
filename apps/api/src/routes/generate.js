@@ -130,6 +130,8 @@ generateRouter.post('/save-draft', async (req, res) => {
       userId = user?.id || null
     }
 
+    console.log('[save-draft] userId:', userId, 'wallet:', wallet)
+
     const { data, error } = await supabase
       .from('token_drafts')
       .insert({
@@ -154,10 +156,14 @@ generateRouter.post('/save-draft', async (req, res) => {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[save-draft] insert error:', error.message, error.details, error.hint)
+      throw error
+    }
+    console.log('[save-draft] saved with id:', data?.id)
     res.json({ success: true, data })
   } catch (err) {
-    console.error('[save-draft]', err.message)
+    console.error('[save-draft] caught:', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })
