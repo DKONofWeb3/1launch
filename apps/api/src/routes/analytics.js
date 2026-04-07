@@ -11,9 +11,9 @@ analyticsRouter.get('/:tokenId/snipers', async (req, res) => {
   try {
     const { data: token, error } = await supabase
       .from('launched_tokens')
-      .select('contract_address, chain, network')
+      .select('contract_address, chain')
       .eq('id', req.params.tokenId)
-      .single()
+      .maybeSingle()
 
     if (error || !token) {
       return res.status(404).json({ success: false, error: 'Token not found' })
@@ -22,7 +22,7 @@ analyticsRouter.get('/:tokenId/snipers', async (req, res) => {
     const snipers = await getSnipers(
       token.contract_address,
       token.chain,
-      token.network || 'testnet'
+      'mainnet'
     )
 
     res.json({ success: true, data: snipers })
@@ -37,9 +37,9 @@ analyticsRouter.get('/:tokenId/holders', async (req, res) => {
   try {
     const { data: token, error } = await supabase
       .from('launched_tokens')
-      .select('contract_address, chain, network, token_drafts(total_supply)')
+      .select('contract_address, chain, token_drafts(total_supply)')
       .eq('id', req.params.tokenId)
-      .single()
+      .maybeSingle()
 
     if (error || !token) {
       return res.status(404).json({ success: false, error: 'Token not found' })
@@ -50,7 +50,7 @@ analyticsRouter.get('/:tokenId/holders', async (req, res) => {
       token.contract_address,
       token.chain,
       totalSupply,
-      token.network || 'testnet'
+      'mainnet'
     )
 
     // Tag whales (>1% of supply)

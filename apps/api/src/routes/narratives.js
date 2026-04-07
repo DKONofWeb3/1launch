@@ -28,7 +28,7 @@ narrativeRouter.get('/:id', async (req, res) => {
       .from('narratives')
       .select('*')
       .eq('id', req.params.id)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     if (!data) return res.status(404).json({ success: false, error: 'Not found' })

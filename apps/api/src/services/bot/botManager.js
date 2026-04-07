@@ -87,7 +87,7 @@ async function startSession(sessionId) {
     .from('bot_sessions')
     .select('*')
     .eq('id', sessionId)
-    .single()
+    .maybeSingle()
 
   if (error || !session) throw new Error('Session not found')
   if (!session.tos_accepted)  throw new Error('ToS not accepted')

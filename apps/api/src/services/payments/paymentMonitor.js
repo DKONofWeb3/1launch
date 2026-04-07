@@ -125,7 +125,7 @@ async function activateSubscription(userId, planId, paymentId, txHash) {
       .from('users')
       .select('telegram_chat_id')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (user?.telegram_chat_id) {
       const { sendNotification } = require('../telegram/telegramBot')

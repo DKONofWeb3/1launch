@@ -27,7 +27,7 @@ botRouter.post('/create', async (req, res) => {
       .from('launched_tokens')
       .select('contract_address, chain')
       .eq('id', token_id)
-      .single()
+      .maybeSingle()
 
     if (!token) {
       return res.status(404).json({ success: false, error: 'Token not found' })
@@ -105,9 +105,9 @@ botRouter.get('/status/:sessionId', async (req, res) => {
     // Fall back to DB
     const { data: session } = await supabase
       .from('bot_sessions')
-      .select('status, stats, tier, chain, network, tos_accepted, created_at, started_at')
+      .select('status, stats, tier, chain, tos_accepted, created_at, started_at')
       .eq('id', req.params.sessionId)
-      .single()
+      .maybeSingle()
 
     if (!session) {
       return res.status(404).json({ success: false, error: 'Session not found' })
@@ -126,7 +126,7 @@ botRouter.get('/sessions', async (req, res) => {
 
     let query = supabase
       .from('bot_sessions')
-      .select('id, token_id, chain, tier, network, status, stats, tos_accepted, created_at, started_at, stopped_at')
+      .select('id, token_id, chain, tier, status, stats, tos_accepted, created_at, started_at, stopped_at')
       .order('created_at', { ascending: false })
 
     if (token_id) query = query.eq('token_id', token_id)
@@ -153,7 +153,7 @@ botRouter.get('/wallets/:sessionId', async (req, res) => {
       .from('bot_sessions')
       .select('wallets, chain, tier')
       .eq('id', req.params.sessionId)
-      .single()
+      .maybeSingle()
 
     if (!session) return res.status(404).json({ success: false, error: 'Not found' })
 

@@ -132,7 +132,7 @@ subscriptionsRouter.get('/payment/:paymentId', async (req, res) => {
       .from('payments')
       .select('*')
       .eq('id', req.params.paymentId)
-      .single()
+      .maybeSingle()
 
     if (error || !data) return res.status(404).json({ success: false, error: 'Payment not found' })
     res.json({ success: true, data })

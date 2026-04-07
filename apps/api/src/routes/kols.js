@@ -42,7 +42,7 @@ kolsRouter.get('/:id', async (req, res) => {
       .from('kols')
       .select('*')
       .eq('id', req.params.id)
-      .single()
+      .maybeSingle()
 
     if (error || !data) return res.status(404).json({ success: false, error: 'Not found' })
     res.json({ success: true, data })
@@ -85,7 +85,7 @@ kolsRouter.post('/:id/rate', async (req, res) => {
       .from('kols')
       .select('rating, rating_count')
       .eq('id', req.params.id)
-      .single()
+      .maybeSingle()
 
     if (!kol) return res.status(404).json({ success: false, error: 'KOL not found' })
 

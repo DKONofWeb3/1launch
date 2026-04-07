@@ -26,7 +26,7 @@ tokenRouter.get('/draft/:id', async (req, res) => {
       .from('token_drafts')
       .select('*')
       .eq('id', req.params.id)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     res.json({ success: true, data })

@@ -20,9 +20,9 @@ lplockRouter.get('/:tokenId/info', async (req, res) => {
 
     const { data: token, error } = await supabase
       .from('launched_tokens')
-      .select('contract_address, chain, network')
+      .select('contract_address, chain')
       .eq('id', req.params.tokenId)
-      .single()
+      .maybeSingle()
 
     if (error || !token) {
       return res.status(404).json({ success: false, error: 'Token not found' })
@@ -38,7 +38,7 @@ lplockRouter.get('/:tokenId/info', async (req, res) => {
       })
     }
 
-    const network = token.network || 'mainnet'
+    const network = 'mainnet'
 
     // Find LP pair address
     const lpTokenAddress = await getLPTokenAddress(token.contract_address, network)
