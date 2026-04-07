@@ -15,7 +15,19 @@ const app  = express()
 const PORT = process.env.PORT || 4000
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors({ origin: process.env.WEB_URL || 'http://localhost:3000', credentials: true }))
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowed = [
+      process.env.WEB_URL,
+      'http://localhost:3000',
+      'https://1launch-web.vercel.app',
+    ].filter(Boolean)
+    // Allow requests with no origin (mobile apps, curl, Render health checks)
+    if (!origin || allowed.includes(origin)) return callback(null, true)
+    callback(new Error('Not allowed by CORS'))
+  },
+  credentials: true,
+}))
 app.use(express.json())
 
 // ── Routes ────────────────────────────────────────────────────────────────────
