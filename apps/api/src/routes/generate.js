@@ -161,6 +161,14 @@ generateRouter.post('/save-draft', async (req, res) => {
       throw error
     }
     console.log('[save-draft] saved with id:', data?.id)
+
+    // Increment tokens_launched on the narrative
+    if (userId && draft.narrative_id) {
+      await supabase.rpc('increment_narrative_launches', {
+        narrative_id: draft.narrative_id,
+      }).catch(() => {})
+    }
+
     res.json({ success: true, data })
   } catch (err) {
     console.error('[save-draft] caught:', err.message)

@@ -81,7 +81,7 @@ app.use('/api/admin',            adminRouter)
 // ── Cron Jobs ─────────────────────────────────────────────────────────────────
 
 // Narrative scraper every 30 min
-cron.schedule('0 * * * *', () => {
+cron.schedule('*/30 * * * *', () => {
   console.log('[CRON] Running narrative scraper...')
   runNarrativeCron()
 })
@@ -136,7 +136,7 @@ cron.schedule('*/5 * * * *', () => {
 
 // Copycat scan every hour
 const { runCopycatScan } = require('./cron/copycatCron')
-cron.schedule('0 * * * *', () => {
+cron.schedule('*/30 * * * *', () => {
   console.log('[CRON] Running copycat scan...')
   runCopycatScan()
 })
