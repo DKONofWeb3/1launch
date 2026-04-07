@@ -67,7 +67,7 @@ roadmapRouter.post('/generate', async (req, res) => {
 
     const parsed = await generateRoadmap({ name, ticker, chain, description, narrative })
     if (!parsed) {
-      return res.status(500).json({ success: false, error: 'AI failed to generate roadmap' })
+      return res.status(503).json({ success: false, error: 'AI is rate limited. Try again in 1 minute.' })
     }
 
     const roadmap = {
@@ -99,9 +99,9 @@ roadmapRouter.get('/:tokenId', async (req, res) => {
       .eq('token_id', req.params.tokenId)
       .order('generated_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (error) return res.json({ success: true, data: null })
+    if (error || !data) return res.json({ success: true, data: null })
     res.json({ success: true, data: data.content })
   } catch (err) {
     res.status(500).json({ success: false, error: err.message })
