@@ -1,7 +1,7 @@
 // apps/api/src/routes/roadmap.js
 
 const { Router } = require('express')
-const { callAI, parseAIJson } = require('../lib/ai')
+const { callAIWithRetry, parseAIJson } = require('../lib/ai')
 const { supabase } = require('../lib/supabase')
 
 const roadmapRouter = Router()
@@ -52,7 +52,7 @@ Rules:
 - Include 4-5 KPIs
 - Respond ONLY with the JSON object
 `
-  const raw = await callAI(prompt)
+  const raw = await callAIWithRetry(prompt)
   return parseAIJson(raw)
 }
 

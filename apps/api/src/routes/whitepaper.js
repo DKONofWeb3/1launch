@@ -1,7 +1,7 @@
 // apps/api/src/routes/whitepaper.js
 
 const { Router } = require('express')
-const { callAI, parseAIJson } = require('../lib/ai')
+const { callAIWithRetry, parseAIJson } = require('../lib/ai')
 const { supabase } = require('../lib/supabase')
 
 const whitepaperRouter = Router()
@@ -44,7 +44,7 @@ Use arrays for multi-paragraph sections.
 
 Respond ONLY with the JSON object. No markdown. No code fences. No duplicate keys.
 `
-  const raw = await callAI(prompt)
+  const raw = await callAIWithRetry(prompt)
   return parseAIJson(raw)
 }
 

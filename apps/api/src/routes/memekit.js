@@ -1,7 +1,7 @@
 // apps/api/src/routes/memekit.js
 
 const { Router } = require('express')
-const { callAI, parseAIJson } = require('../lib/ai')
+const { callAIWithRetry, parseAIJson } = require('../lib/ai')
 const { supabase } = require('../lib/supabase')
 
 const memekitRouter = Router()
@@ -46,7 +46,7 @@ Rules:
 - Respond ONLY with the JSON object
 `
 
-    const raw = await callAI(prompt)
+    const raw = await callAIWithRetry(prompt)
     const parsed = parseAIJson(raw)
 
     if (!parsed?.memes) {
@@ -61,16 +61,15 @@ Rules:
     }))
 
     // Save to DB if token_id provided
-   if (token_id) {
-      try {
-        await supabase
-          .from('meme_kits')
-          .upsert({
-            token_id,
-            memes: memesWithImages,
-            generated_at: new Date().toISOString(),
-          })
-      } catch {}
+    if (token_id) {
+      await supabase
+        .from('meme_kits')
+        .upsert({
+          token_id,
+          memes: memesWithImages,
+          generated_at: new Date().toISOString(),
+        })
+        .catch(() => {}) // non-blocking
     }
 
     res.json({ success: true, data: { memes: memesWithImages } })

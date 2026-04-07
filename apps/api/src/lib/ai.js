@@ -99,4 +99,18 @@ function parseAIJson(raw) {
   }
 }
 
-module.exports = { callAI, parseAIJson }
+// callAIWithRetry — for user-triggered requests, waits longer between retries
+async function callAIWithRetry(prompt, maxRetries = 5) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await callAI(prompt)
+    } catch (err) {
+      if (i === maxRetries - 1) throw err
+      const wait = 3000 * (i + 1) // 3s, 6s, 9s, 12s
+      console.warn(`[AI] Retry ${i + 1}/${maxRetries} in ${wait}ms...`)
+      await sleep(wait)
+    }
+  }
+}
+
+module.exports = { callAI, callAIWithRetry, parseAIJson }
