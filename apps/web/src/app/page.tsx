@@ -217,32 +217,42 @@ export default function LandingPage() {
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         borderBottom: scrollY > 20 ? '1px solid #1E1E2E' : '1px solid transparent',
-        background: scrollY > 20 ? 'rgba(10,10,15,0.96)' : 'transparent',
-        backdropFilter: scrollY > 20 ? 'blur(12px)' : 'none',
+        background: scrollY > 20 ? 'rgba(10,10,15,0.96)' : 'rgba(10,10,15,0.7)',
+        backdropFilter: 'blur(12px)',
         transition: 'all 0.3s',
-        padding: '0 24px', height: 60,
+        padding: '0 20px', height: 60,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <div style={{ width: 28, height: 28, borderRadius: 7, background: '#00FF88', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#0A0A0F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 17, fontWeight: 900, color: '#F9FAFB', letterSpacing: '-0.3px' }}>1launch</span>
-          <span style={{ padding: '2px 7px', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 10, fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, fontWeight: 700, color: '#00FF88', letterSpacing: '0.08em' }}>BETA</span>
+          <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 900, color: '#F9FAFB', letterSpacing: '-0.3px' }}>1launch</span>
+          <span style={{ padding: '2px 6px', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 10, fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, fontWeight: 700, color: '#00FF88' }}>BETA</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+
+        {/* Desktop links */}
+        <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           {[['Features', '#features'], ['How It Works', '#how'], ['Pricing', '#pricing']].map(([label, href]) => (
-            <a key={label} href={href} style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', textDecoration: 'none', transition: 'color 0.15s' }}
+            <a key={label} href={href} style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', textDecoration: 'none' }}
               onMouseEnter={e => e.currentTarget.style.color = '#F9FAFB'}
               onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
             >{label}</a>
           ))}
-          <Link href="/dashboard" style={{ padding: '8px 18px', background: '#00FF88', color: '#0A0A0F', borderRadius: 7, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'opacity 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >Launch Now</Link>
+        </div>
+
+        {/* Right side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link href="/dashboard" className="landing-nav-cta" style={{ padding: '8px 16px', background: '#00FF88', color: '#0A0A0F', borderRadius: 7, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+            Launch Now
+          </Link>
+          {/* Mobile: just show Launch Now button, links hidden via CSS */}
+          <Link href="/dashboard" className="landing-nav-mobile-cta" style={{ padding: '8px 14px', background: '#00FF88', color: '#0A0A0F', borderRadius: 7, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 700, textDecoration: 'none', display: 'none' }}>
+            Launch
+          </Link>
         </div>
       </nav>
 
@@ -506,7 +516,7 @@ export default function LandingPage() {
             {[
               {
                 id: 'free', name: 'Free', price: '$0', color: '#6B7280', border: '#1E1E2E', badge: null, launches: '1 token launch',
-                features: ['BSC + Solana deployment', 'Auto GoPlus audit scan', 'Pre-launch checklist', 'Telegram setup guide', 'Launch timing engine', 'Bubblemaps viewer'],
+                features: ['BSC + Solana deployment', 'Auto GoPlus audit scan', 'Pre-launch checklist', 'Telegram setup guide', 'Bubblemaps viewer'],
                 locked: ['Meme kit — $9', 'Post-launch roadmap — $19', 'Whitepaper — $29'],
                 cta: 'Start Free', ctaStyle: 'ghost',
               },
@@ -613,7 +623,7 @@ export default function LandingPage() {
           <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#374151' }}>© 2025</span>
         </div>
         <div style={{ display: 'flex', gap: 24 }}>
-          {[['Dashboard', '/dashboard'], ['KOLs', '/kols'], ['Timing', '/timing'], ['Pricing', '/pricing']].map(([label, href]) => (
+          {[['Dashboard', '/dashboard'], ['KOLs', '/kols'], ['Pricing', '/pricing']].map(([label, href]) => (
             <Link key={label} href={href} style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#374151', textDecoration: 'none', transition: 'color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#6B7280'}
               onMouseLeave={e => e.currentTarget.style.color = '#374151'}

@@ -2,22 +2,53 @@
 
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 
 export function WalletGuard({ children }: { children: React.ReactNode }) {
   const { address, isConnecting } = useAccount()
+  const [isTelegram, setIsTelegram] = useState(false)
+  const [tgUser, setTgUser]         = useState<any>(null)
+  const [checked, setChecked]       = useState(false)
 
-  if (isConnecting) {
+  useEffect(() => {
+    // Detect Telegram WebApp environment
+    const tg = (window as any).Telegram?.WebApp
+    if (tg?.initDataUnsafe?.user) {
+      const user = tg.initDataUnsafe.user
+      setIsTelegram(true)
+      setTgUser(user)
+      tg.ready()
+      tg.expand()
+      // Store TG session in localStorage for cross-page use
+      localStorage.setItem('tg_user', JSON.stringify(user))
+    } else {
+      // Check if we have a stored TG session
+      const stored = localStorage.getItem('tg_user')
+      if (stored) {
+        setIsTelegram(true)
+        setTgUser(JSON.parse(stored))
+      }
+    }
+    setChecked(true)
+  }, [])
+
+  // Still loading
+  if (!checked || isConnecting) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563' }}>
-          Connecting...
-        </div>
+        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563' }}>Loading...</div>
       </div>
     )
   }
 
+  // TG user — let them through without wallet
+  if (isTelegram) {
+    return <>{children}</>
+  }
+
+  // No wallet — show connect screen
   if (!address) {
     return (
       <div style={{
@@ -25,22 +56,18 @@ export function WalletGuard({ children }: { children: React.ReactNode }) {
         justifyContent: 'center', minHeight: '70vh', padding: '24px',
         textAlign: 'center',
       }}>
-        {/* Logo */}
         <div style={{ width: 56, height: 56, borderRadius: 14, background: '#00FF88', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#0A0A0F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-
         <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 900, color: '#F9FAFB', letterSpacing: '-0.5px', marginBottom: 10 }}>
           Connect Your Wallet
         </h2>
         <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', marginBottom: 32, maxWidth: 280, lineHeight: 1.7 }}>
           Connect your wallet to access the dashboard and launch tokens. Your tokens are tied to your wallet address.
         </p>
-
         <ConnectButton showBalance={false} accountStatus="avatar" chainStatus="icon" />
-
         <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#374151', marginTop: 20 }}>
           BSC + Solana supported · No KYC
         </p>
