@@ -1,31 +1,15 @@
+// apps/api/src/routes/deploy.js
+
 const { Router } = require('express')
 const { supabase } = require('../lib/supabase')
 
 const deployRouter = Router()
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Deploy routes
-//
-// ARCHITECTURE NOTE:
-// In production, token deployment is signed by the USER's wallet (MetaMask/Phantom)
-// on the FRONTEND. The backend never touches user private keys.
-//
-// The flow is:
-// 1. Frontend calls /api/deploy/prepare → gets factory address + deploy fee
-// 2. User signs the transaction in their wallet (MetaMask/Phantom)
-// 3. Transaction goes directly to the blockchain
-// 4. Frontend calls /api/deploy/record → backend saves the result to DB
-//
-// The server-side deploy route (/api/deploy/server-side) is ONLY for
-// testnet testing when you want to bypass wallet signing.
-// ─────────────────────────────────────────────────────────────────────────────
-
 // GET /api/deploy/config/:chain
-// Returns the deployment config the frontend needs to build the transaction
 deployRouter.get('/config/:chain', async (req, res) => {
   try {
     const { chain } = req.params
-    const network = req.query.network || 'testnet'
+    const network = req.query.network || 'mainnet'
 
     if (chain === 'bsc') {
       const { getChainConfig } = require('../services/deployer/bscDeployer')
@@ -33,28 +17,24 @@ deployRouter.get('/config/:chain', async (req, res) => {
       return res.json({
         success: true,
         data: {
-          chain: 'bsc',
+          chain:          'bsc',
           network,
           factoryAddress: config.factoryAddress,
-          rpc: config.rpc,
-          chainId: config.chainId,
-          explorerUrl: config.explorerUrl,
-          // Fee in wei — frontend converts to BNB for display
-          deployFeeWei: network === 'mainnet' ? '25000000000000000' : '1000000000000000',
+          rpc:            config.rpc,
+          chainId:        config.chainId,
+          explorerUrl:    config.explorerUrl,
+          deployFeeWei:   network === 'mainnet' ? '25000000000000000' : '1000000000000000',
         },
       })
     }
 
     if (chain === 'solana') {
-      const network = req.query.network || 'devnet'
       return res.json({
         success: true,
         data: {
-          chain: 'solana',
+          chain:   'solana',
           network,
-          rpc: network === 'mainnet'
-            ? (process.env.HELIUS_SOLANA_URL || 'https://api.mainnet-beta.solana.com')
-            : 'https://api.devnet.solana.com',
+          rpc:     process.env.HELIUS_SOLANA_URL || 'https://api.mainnet-beta.solana.com',
           decimals: 9,
         },
       })
@@ -67,8 +47,7 @@ deployRouter.get('/config/:chain', async (req, res) => {
 })
 
 // POST /api/deploy/record
-// Called by frontend AFTER a successful on-chain deploy
-// Records the deployment result in our database
+// Called by frontend AFTER successful on-chain deploy
 deployRouter.post('/record', async (req, res) => {
   try {
     const {
@@ -77,70 +56,75 @@ deployRouter.post('/record', async (req, res) => {
       chain,
       tx_hash,
       wallet_address,
-      network = 'testnet',
+      network = 'mainnet',
     } = req.body
 
     if (!contract_address || !chain || !tx_hash || !wallet_address) {
       return res.status(400).json({ success: false, error: 'Missing required fields' })
     }
 
-    // Find or create user
-    let { data: user } = await supabase
+    // Find or create user — no .catch() chaining
+    const userResult = await supabase
       .from('users')
       .select('id')
       .eq('wallet_address', wallet_address.toLowerCase())
-      .single()
+      .maybeSingle()
 
-    if (!user) {
-      const { data: newUser } = await supabase
+    let userId = userResult.data?.id
+
+    if (!userId) {
+      const newUserResult = await supabase
         .from('users')
-        .insert({ wallet_address: wallet_address.toLowerCase(), chain, plan: 'free' })
-        .select()
+        .insert({ wallet_address: wallet_address.toLowerCase(), plan: 'free' })
+        .select('id')
         .single()
-      user = newUser
+      userId = newUserResult.data?.id
+    }
+
+    if (!userId) {
+      return res.status(500).json({ success: false, error: 'Failed to resolve user' })
     }
 
     // Update draft status to live
     if (draft_id) {
-           try {
-        await supabase.from('token_drafts').update({ status: 'failed' }).eq('id', req.body.draft_id)
-      } catch {}
+      await supabase
+        .from('token_drafts')
+        .update({ status: 'live' })
+        .eq('id', draft_id)
     }
 
     // Record the launched token
-    const { data: launched, error } = await supabase
+    const launchResult = await supabase
       .from('launched_tokens')
       .insert({
-        user_id:          user.id,
+        user_id:          userId,
         draft_id:         draft_id || null,
         contract_address: contract_address.toLowerCase(),
         chain,
         tx_hash,
-        audit_scan_done:  false,
-        tg_setup_done:    false,
-        volume_bot_tier:  'none',
+        launched_at:      new Date().toISOString(),
       })
       .select()
       .single()
 
-    if (error) throw error
+    if (launchResult.error) throw launchResult.error
 
-    // Update narrative tokens_launched count if draft has a narrative
+    // Update narrative tokens_launched count
     if (draft_id) {
-      const { data: draft } = await supabase
+      const draftResult = await supabase
         .from('token_drafts')
         .select('narrative_id')
         .eq('id', draft_id)
-        .single()
+        .maybeSingle()
 
-      if (draft?.narrative_id) {
+      if (draftResult.data?.narrative_id) {
         await supabase.rpc('increment_narrative_launches', {
-          narrative_id: draft.narrative_id,
-        }).catch(() => {})
+          narrative_id: draftResult.data.narrative_id,
+        })
       }
     }
 
-    res.json({ success: true, data: launched })
+    res.json({ success: true, data: launchResult.data })
   } catch (err) {
     console.error('[POST /deploy/record]', err.message)
     res.status(500).json({ success: false, error: err.message })
@@ -148,28 +132,29 @@ deployRouter.post('/record', async (req, res) => {
 })
 
 // POST /api/deploy/server-side
-// TESTNET ONLY — platform wallet deploys on behalf of user (no MetaMask needed)
-// Remove or gate this behind admin auth before going to mainnet
+// Platform wallet deploys on behalf of user (used when no factory contract yet)
 deployRouter.post('/server-side', async (req, res) => {
   try {
-    const { draft_id, chain = 'bsc', network = 'testnet' } = req.body
+    const { draft_id, chain = 'bsc', network = 'mainnet', wallet_address } = req.body
 
     if (!draft_id) {
       return res.status(400).json({ success: false, error: 'draft_id required' })
     }
 
     // Fetch the draft
-    const { data: draft, error: draftError } = await supabase
+    const draftResult = await supabase
       .from('token_drafts')
       .select('*')
       .eq('id', draft_id)
-      .single()
+      .maybeSingle()
 
-    if (draftError || !draft) {
+    if (draftResult.error || !draftResult.data) {
       return res.status(404).json({ success: false, error: 'Draft not found' })
     }
 
-    // Update status to deploying
+    const draft = draftResult.data
+
+    // Mark as deploying
     await supabase
       .from('token_drafts')
       .update({ status: 'deploying' })
@@ -182,8 +167,8 @@ deployRouter.post('/server-side', async (req, res) => {
       result = await deployTokenServerSide({
         name:         draft.name,
         symbol:       draft.ticker,
-        totalSupply:  draft.total_supply,
-        ownerAddress: process.env.PLATFORM_WALLET_ADDRESS,
+        totalSupply:  draft.total_supply || '1000000000',
+        ownerAddress: wallet_address || process.env.PLATFORM_WALLET_ADDRESS,
         network,
       })
     } else if (chain === 'solana') {
@@ -191,53 +176,75 @@ deployRouter.post('/server-side', async (req, res) => {
       result = await deployTokenServerSide({
         name:         draft.name,
         symbol:       draft.ticker,
-        totalSupply:  draft.total_supply,
-        ownerAddress: process.env.SOLANA_PLATFORM_WALLET_ADDRESS,
+        totalSupply:  parseInt(draft.total_supply) || 1000000000,
+        decimals:     9,
+        ownerAddress: wallet_address || process.env.SOLANA_PLATFORM_WALLET_ADDRESS,
         network,
       })
     } else {
       return res.status(400).json({ success: false, error: 'Unsupported chain' })
     }
 
-    // Update draft to live
+    // Find or create user
+    let userId = null
+    if (wallet_address) {
+      const uResult = await supabase
+        .from('users')
+        .select('id')
+        .eq('wallet_address', wallet_address.toLowerCase())
+        .maybeSingle()
+
+      userId = uResult.data?.id
+
+      if (!userId) {
+        const newU = await supabase
+          .from('users')
+          .insert({ wallet_address: wallet_address.toLowerCase(), plan: 'free' })
+          .select('id')
+          .single()
+        userId = newU.data?.id
+      }
+    }
+
+    // Mark draft live
     await supabase
       .from('token_drafts')
       .update({ status: 'live' })
       .eq('id', draft_id)
 
-    // Save to launched_tokens
-    const { data: launched } = await supabase
+    // Save launched token
+    const launchResult = await supabase
       .from('launched_tokens')
       .insert({
+        user_id:          userId,
         draft_id,
         contract_address: result.contractAddress.toLowerCase(),
         chain,
         tx_hash:          result.txHash,
-        audit_scan_done:  false,
-        tg_setup_done:    false,
-        volume_bot_tier:  'none',
+        launched_at:      new Date().toISOString(),
       })
       .select()
       .single()
 
+    if (launchResult.error) throw launchResult.error
+
     res.json({
       success: true,
       data: {
-        ...launched,
+        ...launchResult.data,
         explorerUrl: result.explorerUrl,
-        txUrl: result.txUrl,
+        txUrl:       result.txUrl,
       },
     })
   } catch (err) {
     console.error('[POST /deploy/server-side]', err.message)
 
-    // Mark draft as failed
+    // Mark draft as failed — no .catch() chaining
     if (req.body.draft_id) {
       await supabase
         .from('token_drafts')
         .update({ status: 'failed' })
         .eq('id', req.body.draft_id)
-        .catch(() => {})
     }
 
     res.status(500).json({ success: false, error: err.message })
