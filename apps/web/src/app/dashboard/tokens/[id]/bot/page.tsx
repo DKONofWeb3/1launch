@@ -8,7 +8,7 @@ import { api } from '@/lib/api'
 import { BOT_TIERS } from './botTiers'
 
 type Tier = 'starter' | 'growth' | 'pro'
-type Step = 'tos' | 'tier' | 'wallets' | 'running'
+type Step = 'tos' | 'tier' | 'payment' | 'wallets' | 'running'
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -263,12 +263,65 @@ export default function BotPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <button onClick={() => setStep('tos')} style={{ padding: '10px 18px', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', cursor: 'pointer' }}>Back</button>
             <button
-              onClick={handleCreateSession}
-              disabled={working}
-              style={{ padding: '10px 22px', background: working ? '#1E1E2E' : '#00FF88', color: working ? '#4B5563' : '#0A0A0F', border: 'none', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, cursor: working ? 'not-allowed' : 'pointer' }}
+              onClick={() => setStep('payment')}
+              style={{ padding: '10px 22px', background: '#00FF88', color: '#0A0A0F', border: 'none', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
             >
-              {working ? 'Creating...' : 'Create Bot Session'}
+              Continue to Payment
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2b: Payment */}
+      {step === 'payment' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 12, padding: '20px 24px' }}>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 16 }}>
+              Subscription Required
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 800, color: '#F9FAFB', marginBottom: 4 }}>
+                  Volume Bot — {selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)}
+                </div>
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280' }}>
+                  {selectedTier === 'starter' ? '$29/mo · 3 wallets' : selectedTier === 'growth' ? '$99/mo · 15 wallets' : '$299/mo · 50 wallets'}
+                </div>
+              </div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 28, fontWeight: 900, color: '#00FF88' }}>
+                {selectedTier === 'starter' ? '$29' : selectedTier === 'growth' ? '$99' : '$299'}
+                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563' }}>/mo</span>
+              </div>
+            </div>
+            <div style={{ padding: '12px 14px', background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280', marginBottom: 20 }}>
+              Pay with USDT, USDC, BNB or SOL. Subscription activates automatically within 2 minutes of payment confirmation.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setStep('tier')}
+                style={{ flex: 1, padding: '10px 0', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', cursor: 'pointer' }}
+              >
+                Back
+              </button>
+              <button
+                onClick={() => {
+                  // Redirect to pricing page with bot plan pre-selected
+                  window.open(`/pricing?bot=${selectedTier}`, '_blank')
+                }}
+                style={{ flex: 2, padding: '10px 0', background: '#FF9500', color: '#0A0A0F', border: 'none', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Pay ${selectedTier === 'starter' ? '29' : selectedTier === 'growth' ? '99' : '299'}/mo
+              </button>
+            </div>
+            <div style={{ textAlign: 'center' as const, marginTop: 12 }}>
+              <button
+                onClick={handleCreateSession}
+                disabled={working}
+                style={{ background: 'none', border: 'none', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#374151', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                {working ? 'Creating...' : 'I already paid — activate bot'}
+              </button>
+            </div>
           </div>
         </div>
       )}
