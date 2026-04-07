@@ -191,7 +191,9 @@ function DeployPageContent() {
   const searchParams = useSearchParams()
   const router       = useRouter()
   const draftId      = searchParams.get('draft')
-  const chain        = searchParams.get('chain') || 'bsc'
+  const chainParam   = searchParams.get('chain') || 'bsc'
+  const isSolana      = chainParam === 'solana'
+  const chain         = chainParam
 
   const [draft,          setDraft]          = useState<any>(null)
   const [config,         setConfig]         = useState<any>(null)
@@ -199,7 +201,7 @@ function DeployPageContent() {
   const [result,         setResult]         = useState<DeployResult | null>(null)
   const [error,          setError]          = useState<string | null>(null)
   const [loading,        setLoading]        = useState(true)
-  const [paymentPaid,    setPaymentPaid]    = useState(false)
+  const [paymentPaid,    setPaymentPaid]    = useState(false) // will be set true immediately for BSC
   const [paymentData,    setPaymentData]    = useState<any>(null)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError,   setPaymentError]   = useState<string | null>(null)
@@ -226,7 +228,7 @@ function DeployPageContent() {
     try {
       let deployResult: DeployResult
 
-      if (chain === 'bsc') {
+      if (!isSolana) {
         // Use server-side deploy if no wallet connected or no factory address
         if (!config?.factoryAddress || !bscAddress) {
           setStatus('pending')
@@ -271,7 +273,7 @@ function DeployPageContent() {
     }
   }
 
-  const deployFeeUSD = chain === 'bsc' ? 15 : 6
+  const deployFeeUSD = !isSolana ? 15 : 6
 
   async function initiatePayment() {
     if (!bscAddress && !chain) return
@@ -280,8 +282,8 @@ function DeployPageContent() {
     try {
       const res = await api.post('/api/subscriptions/initiate', {
         plan_id: 'deploy_fee',
-        chain:   chain === 'solana' ? 'solana' : 'bsc',
-        token:   chain === 'solana' ? 'SOL' : 'BNB',
+        chain:   isSolana ? 'solana' : 'bsc',
+        token:   isSolana ? 'SOL' : 'BNB',
         wallet:  bscAddress || 'tg_user',
       })
       if (res.data.success) {
@@ -302,6 +304,11 @@ function DeployPageContent() {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  // BSC — no off-chain payment gate needed, factory handles fees on-chain
+  useEffect(() => {
+    if (!isSolana) setPaymentPaid(true)
+  }, [chain])
 
   // Poll for payment confirmation
   useEffect(() => {
@@ -365,11 +372,11 @@ function DeployPageContent() {
           </div>
           <div style={{
             marginLeft: 'auto', padding: '4px 10px',
-            background: chain === 'bsc' ? 'rgba(243,186,47,0.1)' : 'rgba(153,69,255,0.1)',
-            border: `1px solid ${chain === 'bsc' ? 'rgba(243,186,47,0.3)' : 'rgba(153,69,255,0.3)'}`,
+            background: !isSolana ? 'rgba(243,186,47,0.1)' : 'rgba(153,69,255,0.1)',
+            border: `1px solid ${!isSolana ? 'rgba(243,186,47,0.3)' : 'rgba(153,69,255,0.3)'}`,
             borderRadius: 6,
             fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 700,
-            color: chain === 'bsc' ? '#F3BA2F' : '#9945FF',
+            color: !isSolana ? '#F3BA2F' : '#9945FF',
           }}>
             {chain.toUpperCase()}
           </div>
@@ -481,8 +488,8 @@ function DeployPageContent() {
       {(status === 'idle' || status === 'error') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-          {/* Step 1 — Pay deploy fee */}
-          {!paymentPaid && (
+          {/* Step 1 — Pay deploy fee (Solana only — BSC factory handles fees on-chain) */}
+          {!paymentPaid && isSolana && (
             <div style={{
               background: '#0E0E16', border: '1px solid #1E1E2E',
               borderRadius: 12, padding: '18px 20px',
@@ -497,13 +504,13 @@ function DeployPageContent() {
                 </div>
                 <div style={{
                   padding: '4px 10px',
-                  background: chain === 'bsc' ? 'rgba(243,186,47,0.1)' : 'rgba(153,69,255,0.1)',
-                  border: `1px solid ${chain === 'bsc' ? 'rgba(243,186,47,0.3)' : 'rgba(153,69,255,0.3)'}`,
+                  background: !isSolana ? 'rgba(243,186,47,0.1)' : 'rgba(153,69,255,0.1)',
+                  border: `1px solid ${!isSolana ? 'rgba(243,186,47,0.3)' : 'rgba(153,69,255,0.3)'}`,
                   borderRadius: 6,
                   fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 700,
-                  color: chain === 'bsc' ? '#F3BA2F' : '#9945FF',
+                  color: !isSolana ? '#F3BA2F' : '#9945FF',
                 }}>
-                  Pay with {chain === 'bsc' ? 'BNB' : 'SOL'}
+                  Pay with {!isSolana ? 'BNB' : 'SOL'}
                 </div>
               </div>
 
@@ -532,7 +539,7 @@ function DeployPageContent() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.1em' }}>SEND EXACTLY</div>
                   <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 900, color: '#00FF88' }}>
-                    {paymentData.crypto_amount} {chain === 'bsc' ? 'BNB' : 'SOL'}
+                    {paymentData.crypto_amount} {!isSolana ? 'BNB' : 'SOL'}
                   </div>
                   <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.1em', marginTop: 4 }}>TO ADDRESS</div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -569,7 +576,7 @@ function DeployPageContent() {
             )}
 
             <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280', letterSpacing: '0.12em', marginBottom: 10 }}>
-              {paymentPaid ? 'STEP 2 — DEPLOY' : 'STEP 2 — DEPLOY (pay first)'}
+              {isSolana ? (paymentPaid ? 'STEP 2 — DEPLOY' : 'STEP 2 — DEPLOY (pay first)') : 'DEPLOY'}
             </div>
 
             <button
