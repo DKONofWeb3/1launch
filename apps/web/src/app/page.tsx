@@ -236,7 +236,7 @@ export default function LandingPage() {
 
         {/* Desktop links */}
         <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          {[['Features', '#features'], ['How It Works', '#how'], ['Pricing', '#pricing']].map(([label, href]) => (
+          {[['Features', '#features'], ['How It Works', '#how']].map(([label, href]) => (
             <a key={label} href={href} style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', textDecoration: 'none' }}
               onMouseEnter={e => e.currentTarget.style.color = '#F9FAFB'}
               onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
@@ -501,98 +501,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Pricing ───────────────────────────────────────────────────── */}
-      <section id="pricing" style={{ padding: '100px 24px', background: '#0E0E16', borderTop: '1px solid #1E1E2E' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>Pricing</div>
-            <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: '#F9FAFB', letterSpacing: '-1px', marginBottom: 14 }}>Pay with crypto. No cards.</h2>
-            <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, color: '#6B7280', maxWidth: 440, margin: '0 auto' }}>
-              USDT, USDC, BNB, or SOL. Subscriptions activate automatically within 2 minutes of payment.
-            </p>
-          </div>
 
-          <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-            {[
-              {
-                id: 'free', name: 'Free', price: '$0', color: '#6B7280', border: '#1E1E2E', badge: null, launches: '1 token launch',
-                features: ['BSC + Solana deployment', 'Auto GoPlus audit scan', 'Pre-launch checklist', 'Telegram setup guide', 'Bubblemaps viewer'],
-                locked: ['Meme kit — $9', 'Post-launch roadmap — $19', 'Whitepaper — $29'],
-                cta: 'Start Free', ctaStyle: 'ghost',
-              },
-              {
-                id: 'builder', name: 'Builder', price: '$49', color: '#3B82F6', border: 'rgba(59,130,246,0.25)', badge: null, launches: '5 launches / month',
-                features: ['Everything in Free', 'Meme kit generator', 'Post-launch roadmap', 'LP lock (basic)', 'On-chain analytics', 'KOL marketplace access'],
-                locked: ['Whitepaper — $29 add-on', 'Sniper tracker — $14/mo', 'Copycat tracker — $14/mo'],
-                cta: 'Get Builder', ctaStyle: 'blue',
-              },
-              {
-                id: 'pro', name: 'Pro', price: '$149', color: '#00FF88', border: 'rgba(0,255,136,0.35)', badge: 'Most Popular', launches: 'Unlimited launches',
-                features: ['Everything in Builder', 'Whitepaper generator', 'Sniper + whale tracker', 'Copycat tracker + alerts', 'Volume bot (Starter tier)', 'Priority in KOL marketplace'],
-                locked: [],
-                cta: 'Get Pro', ctaStyle: 'green',
-              },
-              {
-                id: 'agency', name: 'Agency', price: '$499', color: '#FF9500', border: 'rgba(255,149,0,0.25)', badge: null, launches: 'Unlimited + white-label',
-                features: ['Everything in Pro', 'Volume bot (Growth tier)', 'White-label dashboard', 'Agency client management', 'Custom branding', 'Priority support'],
-                locked: [],
-                cta: 'Get Agency', ctaStyle: 'orange',
-              },
-            ].map(plan => (
-              <div key={plan.id} style={{ background: plan.badge ? 'rgba(0,255,136,0.03)' : '#0A0A0F', border: `1.5px solid ${plan.border}`, borderRadius: 14, padding: '28px 24px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-                {plan.badge && (
-                  <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', padding: '3px 12px', background: '#00FF88', borderRadius: 20, fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, fontWeight: 800, color: '#0A0A0F', whiteSpace: 'nowrap' }}>
-                    {plan.badge}
-                  </div>
-                )}
-
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>{plan.name}</div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                    <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 36, fontWeight: 900, color: plan.color }}>{plan.price}</span>
-                    {plan.price !== '$0' && <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563' }}>/mo</span>}
-                  </div>
-                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280', marginBottom: 16 }}>{plan.launches}</div>
-                  <div style={{ height: 1, background: '#1E1E2E', marginBottom: 16 }} />
-                </div>
-
-                <div style={{ flex: 1, marginBottom: 20 }}>
-                  {plan.features.map(f => (
-                    <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="7" cy="7" r="6" fill={`${plan.color}20`}/><path d="M4 7l2 2 4-4" stroke={plan.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#9CA3AF' }}>{f}</span>
-                    </div>
-                  ))}
-                  {plan.locked.map(f => (
-                    <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, opacity: 0.4 }}>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, marginTop: 1 }}><rect x="3" y="6" width="8" height="6" rx="1.5" stroke="#6B7280" strokeWidth="1.2"/><path d="M5 6V4.5a2 2 0 1 1 4 0V6" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                      <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#4B5563' }}>{f}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <Link href="/pricing" style={{
-                  display: 'block', textAlign: 'center', padding: '11px 0',
-                  background: plan.ctaStyle === 'green' ? '#00FF88' : plan.ctaStyle === 'ghost' ? 'transparent' : `${plan.color}15`,
-                  color: plan.ctaStyle === 'green' ? '#0A0A0F' : plan.color,
-                  border: `1px solid ${plan.ctaStyle === 'ghost' ? '#1E1E2E' : `${plan.color}40`}`,
-                  borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'all 0.15s',
-                }}>
-                  {plan.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: 32 }}>
-            <Link href="/pricing" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563', textDecoration: 'none' }}>
-              View full pricing with all add-ons →
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Final CTA ─────────────────────────────────────────────────── */}
+            {/* ── Final CTA ─────────────────────────────────────────────────── */}
       <section style={{ padding: '120px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 800, height: 400, background: 'radial-gradient(ellipse, rgba(0,255,136,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', maxWidth: 600, margin: '0 auto' }}>
@@ -623,7 +533,7 @@ export default function LandingPage() {
           <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#374151' }}>© 2025</span>
         </div>
         <div style={{ display: 'flex', gap: 24 }}>
-          {[['Dashboard', '/dashboard'], ['KOLs', '/kols'], ['Pricing', '/pricing']].map(([label, href]) => (
+          {[['Dashboard', '/dashboard']].map(([label, href]) => (
             <Link key={label} href={href} style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#374151', textDecoration: 'none', transition: 'color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#6B7280'}
               onMouseLeave={e => e.currentTarget.style.color = '#374151'}

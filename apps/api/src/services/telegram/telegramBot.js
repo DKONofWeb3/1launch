@@ -481,16 +481,15 @@ function setupHandlers(bot) {
   bot.hears(['Subscribe', '/subscribe'], async (ctx) => {
     const appUrl = getAppUrl()
     const msg =
-      '*1launch Plans*\n\n' +
-      'Free — 1 launch, core tools\n' +
-      'Builder — $49/mo — 5 launches, full toolkit\n' +
-      'Pro — $149/mo — unlimited, vol bot included\n' +
-      'Agency — $499/mo — white-label, priority\n\n' +
-      'Pay with BNB, SOL, USDT or USDC. Auto-activates within 2 minutes.'
+      '*1launch Pricing*\n\n' +
+      'BSC deploy — $15 per token\n' +
+      'Solana deploy — $6 per token\n\n' +
+      'Volume Bot — $29 / $79 / $149 per token\nKeeps your chart alive after launch.\n\n' +
+      'Pay per launch. No monthly fees.'
 
     await ctx.reply(msg, {
       parse_mode: 'Markdown',
-      ...(appUrl ? Markup.inlineKeyboard([[Markup.button.url('View Plans + Pay', `${appUrl}/pricing`)]]) : {}),
+      ...(appUrl ? Markup.inlineKeyboard([[Markup.button.url('Get Started Free', `${appUrl}/dashboard`)]]) : {}),
     })
   })
 
