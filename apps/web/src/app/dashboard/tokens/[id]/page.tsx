@@ -147,80 +147,23 @@ export default function TokenPage() {
       </div>
 
       {/* Quick action buttons */}
-      <div className="quick-actions" style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <button
-          onClick={() => router.push(`/dashboard/tokens/${params.id}/roadmap`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: '#3B82F6' }}
+          onClick={() => {}}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 7, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#00FF88' }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M9 12h6M9 16h4" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          Roadmap
+          Boost Token
         </button>
-        <button
-          onClick={() => router.push(`/dashboard/tokens/${params.id}/whitepaper`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: '#9CA3AF' }}
+        <a
+          href={token.chain === 'bsc' ? `https://bscscan.com/token/${token.contract_address}` : `https://solscan.io/token/${token.contract_address}`}
+          target="_blank" rel="noreferrer"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 7, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', textDecoration: 'none' }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="#9CA3AF" strokeWidth="1.5" strokeLinejoin="round"/>
-            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          Whitepaper
-        </button>
-        <button
-          onClick={() => router.push(`/dashboard/tokens/${params.id}/lplock`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(255,149,0,0.08)', border: '1px solid rgba(255,149,0,0.2)', borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: '#FF9500' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="11" width="18" height="11" rx="2" stroke="#FF9500" strokeWidth="1.5"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#FF9500" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          LP Lock
-        </button>
-        <button
-          onClick={() => router.push(`/dashboard/tokens/${params.id}/analytics`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: '#3B82F6' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M21 21H4.6A2.6 2.6 0 0 1 2 18.4V3" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M7 16l4-5 4 3 4-6" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Analytics
-        </button>
-        <button
-          onClick={() => router.push(`/dashboard/tokens/${params.id}/bot`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: '#8B5CF6' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1a7 7 0 0 1-14 0h-1a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1V9a7 7 0 0 1 7-7z" stroke="#8B5CF6" strokeWidth="1.5"/>
-            <path d="M9 12h.01M15 12h.01" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          Vol Bot
-        </button>
-        <button
-          onClick={() => router.push(`/dashboard/tokens/${params.id}/memekit`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(255,149,0,0.08)', border: '1px solid rgba(255,149,0,0.2)', borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: '#FF9500' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" rx="3" stroke="#FF9500" strokeWidth="1.5"/>
-            <path d="M3 15l5-5 4 4 3-3 6 6" stroke="#FF9500" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          Meme Kit
-        </button>
-        <button
-          onClick={() => router.push(`/dashboard/tokens/${params.id}/telegram`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: token.tg_setup_done ? 'rgba(0,255,136,0.08)' : 'rgba(39,174,230,0.08)', border: `1px solid ${token.tg_setup_done ? 'rgba(0,255,136,0.2)' : 'rgba(39,174,230,0.2)'}`, borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: token.tg_setup_done ? '#00FF88' : '#27AEE6' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-          </svg>
-          {token.tg_setup_done ? 'TG Setup Done' : 'Setup Telegram'}
-        </button>
+          View on Explorer
+        </a>
       </div>
 
-      {/* Tabs */}
+            {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
         {(['overview', 'audit', 'socials', 'copycats', 'bubblemaps'] as const).map(tab => (
           <button

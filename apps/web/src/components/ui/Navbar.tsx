@@ -6,24 +6,18 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { IconRocket, IconPulse, IconSignal, IconTrendingUp } from '@/components/ui/Icons'
 
 const links = [
-  { href: '/dashboard',        label: 'Narratives' },
-  { href: '/dashboard/drafts', label: 'Drafts'     },
-  { href: '/dashboard/tokens', label: 'Tokens'     },
-  { href: '/pricing',          label: 'Pricing'    },
-  { href: '/launch',           label: 'Launch'     },
+  { href: '/dashboard',        label: 'Feed'      },
+  { href: '/launch',           label: 'Launch'    },
+  { href: '/dashboard/tokens', label: 'My Tokens' },
 ]
 
 export function Navbar() {
-  const pathname    = usePathname()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
-  // Close menu on route change
   useEffect(() => { setOpen(false) }, [pathname])
-
-  // Prevent body scroll when menu open
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
@@ -37,9 +31,12 @@ export function Navbar() {
       <nav className="navbar">
         <div className="navbar-inner">
           {/* Logo */}
-          <Link href="/" className="logo-mark">
+          <Link href="/dashboard" className="logo-mark">
             <div className="logo-icon">
-              <IconRocket size={15} color="#0A0A0F" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                  stroke="#0A0A0F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             <span className="logo-text">1launch</span>
             <span className="logo-tag">BETA</span>
@@ -55,13 +52,11 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Right side */}
+          {/* Right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div className="nav-wallet">
               <ConnectButton showBalance={false} accountStatus="avatar" chainStatus="icon" />
             </div>
-
-            {/* Hamburger */}
             <button className="mobile-menu-btn" onClick={() => setOpen(o => !o)} aria-label="Menu">
               {open ? (
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -87,12 +82,9 @@ export function Navbar() {
           padding: '20px 16px 40px',
           overflowY: 'auto',
         }}>
-          {/* Wallet first */}
           <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
             <ConnectButton showBalance={false} accountStatus="full" chainStatus="icon" />
           </div>
-
-          {/* Nav links */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {links.map(l => (
               <Link key={l.href} href={l.href}
@@ -105,7 +97,6 @@ export function Navbar() {
                   borderRadius: 10, textDecoration: 'none',
                   fontFamily: 'IBM Plex Mono, monospace', fontSize: 14, fontWeight: 600,
                   color: isActive(l.href) ? '#00FF88' : '#9CA3AF',
-                  transition: 'all 0.15s',
                 }}>
                 {l.label}
               </Link>
