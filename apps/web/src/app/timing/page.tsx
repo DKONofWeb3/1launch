@@ -1,8 +1,7 @@
-// apps/web/src/app/timing/page.tsx
 'use client'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-export default function TimingPage() {
+export default function Page() {
   const router = useRouter()
   useEffect(() => { router.replace('/dashboard') }, [])
   return null
