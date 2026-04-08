@@ -187,6 +187,293 @@ function useBSCDeploy() {
 
 // ── Main Deploy Page ──────────────────────────────────────────────────────────
 
+// ── Post-deploy modal ────────────────────────────────────────────────────────
+function PostDeployModal({
+  result, draft, chain, onDismiss,
+}: {
+  result: DeployResult
+  draft: any
+  chain: string
+  onDismiss: () => void
+}) {
+  const [copied, setCopied]           = useState(false)
+  const [volTier, setVolTier]         = useState<string | null>(null)
+  const [volLoading, setVolLoading]   = useState(false)
+  const [volDone, setVolDone]         = useState(false)
+  const [tweetCopied, setTweetCopied] = useState(false)
+
+  const tiers = [
+    { id: 'starter', label: 'Starter', price: '$29', wallets: '3 wallets' },
+    { id: 'growth',  label: 'Growth',  price: '$79', wallets: '10 wallets', popular: true },
+    { id: 'pro',     label: 'Pro',     price: '$149', wallets: '25 wallets' },
+  ]
+
+  const launchTweet = `Just launched $${draft?.ticker} on ${chain.toUpperCase()} via @1launch_\n\nContract: ${result.contractAddress}\n\n${result.explorerUrl}`
+
+  function copyAddress() {
+    navigator.clipboard.writeText(result.contractAddress)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function copyTweet() {
+    navigator.clipboard.writeText(launchTweet)
+    setTweetCopied(true)
+    setTimeout(() => setTweetCopied(false), 2000)
+  }
+
+  async function activateVolBot() {
+    if (!volTier) return
+    setVolLoading(true)
+    try {
+      await new Promise(r => setTimeout(r, 1200))
+      setVolDone(true)
+    } catch {}
+    finally { setVolLoading(false) }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(10,10,15,0.96)',
+      backdropFilter: 'blur(12px)',
+      overflowY: 'auto',
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+      padding: '40px 20px 60px',
+    }}>
+      <div style={{ maxWidth: 520, width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Live badge */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '6px 16px',
+            background: 'rgba(0,255,136,0.08)',
+            border: '1px solid rgba(0,255,136,0.25)',
+            borderRadius: 20,
+            fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700,
+            color: '#00FF88',
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00FF88', animation: 'pulse 1.5s infinite' }} />
+            Token is live on {chain.toUpperCase()}
+          </div>
+        </div>
+
+        {/* Contract address */}
+        <div style={{
+          background: '#0E0E16', border: '1px solid #1E1E2E',
+          borderRadius: 12, padding: '16px 18px',
+        }}>
+          <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.12em', marginBottom: 8 }}>
+            CONTRACT ADDRESS
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              flex: 1, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11,
+              color: '#F9FAFB', wordBreak: 'break-all',
+            }}>
+              {result.contractAddress}
+            </div>
+            <button onClick={copyAddress} style={{
+              padding: '6px 12px', flexShrink: 0,
+              background: copied ? 'rgba(0,255,136,0.1)' : 'transparent',
+              border: `1px solid ${copied ? 'rgba(0,255,136,0.3)' : '#1E1E2E'}`,
+              borderRadius: 6, cursor: 'pointer',
+              fontFamily: 'IBM Plex Mono, monospace', fontSize: 10,
+              color: copied ? '#00FF88' : '#6B7280',
+            }}>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <a href={result.explorerUrl} target="_blank" rel="noreferrer" style={{
+              flex: 1, padding: '8px 0', textAlign: 'center',
+              background: '#00FF88', border: 'none', borderRadius: 7,
+              fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 700,
+              color: '#0A0A0F', textDecoration: 'none',
+            }}>
+              View on Explorer
+            </a>
+            <a href={result.txUrl} target="_blank" rel="noreferrer" style={{
+              flex: 1, padding: '8px 0', textAlign: 'center',
+              background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 7,
+              fontFamily: 'IBM Plex Mono, monospace', fontSize: 11,
+              color: '#6B7280', textDecoration: 'none',
+            }}>
+              View Tx
+            </a>
+          </div>
+        </div>
+
+        {/* Free actions */}
+        <div style={{
+          background: '#0E0E16', border: '1px solid #1E1E2E',
+          borderRadius: 12, padding: '16px 18px',
+        }}>
+          <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.12em', marginBottom: 14 }}>
+            SET IT UP FOR ATTENTION
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { label: 'Setup Telegram', sub: 'Start building community', href: '#' },
+              { label: 'Auto Audit Scan', sub: 'Builds buyer trust instantly', href: '#' },
+            ].map(action => (
+              <a key={action.label} href={action.href} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 14px',
+                background: '#0A0A0F', border: '1px solid #1E1E2E',
+                borderRadius: 8, textDecoration: 'none',
+              }}>
+                <div>
+                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 600, color: '#F9FAFB', marginBottom: 2 }}>
+                    {action.label}
+                  </div>
+                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>
+                    {action.sub}
+                  </div>
+                </div>
+                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', fontWeight: 700 }}>
+                  free
+                </span>
+              </a>
+            ))}
+            {/* Share on X */}
+            <button onClick={copyTweet} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 14px',
+              background: tweetCopied ? 'rgba(0,255,136,0.04)' : '#0A0A0F',
+              border: `1px solid ${tweetCopied ? 'rgba(0,255,136,0.2)' : '#1E1E2E'}`,
+              borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left',
+            }}>
+              <div>
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 600, color: '#F9FAFB', marginBottom: 2 }}>
+                  {tweetCopied ? 'Tweet copied to clipboard' : 'Share on X'}
+                </div>
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>
+                  Pre-written launch tweet ready to post
+                </div>
+              </div>
+              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', fontWeight: 700 }}>
+                free
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Volume bot upsell */}
+        {!volDone ? (
+          <div style={{
+            background: '#0E0E16',
+            border: '1px solid #2A2A3E',
+            borderRadius: 12, padding: '18px 18px',
+          }}>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.12em', marginBottom: 6 }}>
+              PAID BOOST
+            </div>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 900, color: '#F9FAFB', marginBottom: 6 }}>
+              Don't let your chart go quiet.
+            </div>
+            <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280', lineHeight: 1.7, marginBottom: 4 }}>
+              Volume Bot simulates real trading activity so your token doesn't look dead at launch.
+            </p>
+            <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#374151', marginBottom: 16 }}>
+              First 5 minutes matter most. Runs automatically. No setup needed.
+            </p>
+
+            {/* Tiers */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {tiers.map(t => (
+                <button key={t.id} onClick={() => setVolTier(t.id)} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '11px 14px',
+                  background: volTier === t.id ? 'rgba(0,255,136,0.06)' : '#0A0A0F',
+                  border: `1.5px solid ${volTier === t.id ? 'rgba(0,255,136,0.3)' : '#1E1E2E'}`,
+                  borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left',
+                  transition: 'all 0.15s',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${volTier === t.id ? '#00FF88' : '#2A2A3E'}`,
+                      background: volTier === t.id ? '#00FF88' : 'transparent',
+                      transition: 'all 0.15s',
+                    }} />
+                    <div>
+                      <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#F9FAFB' }}>
+                        {t.label}
+                      </span>
+                      {t.popular && (
+                        <span style={{ marginLeft: 8, padding: '1px 6px', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 4, fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#00FF88', fontWeight: 700 }}>
+                          most used
+                        </span>
+                      )}
+                      <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563', marginTop: 1 }}>
+                        {t.wallets}
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700, color: '#F9FAFB' }}>
+                    {t.price}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={activateVolBot}
+                disabled={!volTier || volLoading}
+                style={{
+                  flex: 2, padding: '12px 0',
+                  background: volTier && !volLoading ? '#00FF88' : '#1E1E2E',
+                  border: 'none', borderRadius: 8,
+                  cursor: volTier && !volLoading ? 'pointer' : 'not-allowed',
+                  fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700,
+                  color: volTier && !volLoading ? '#0A0A0F' : '#374151',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {volLoading ? 'Activating...' : 'Boost My Token'}
+              </button>
+              <button onClick={onDismiss} style={{
+                flex: 1, padding: '12px 0',
+                background: 'transparent', border: '1px solid #1E1E2E',
+                borderRadius: 8, cursor: 'pointer',
+                fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563',
+              }}>
+                Skip for now
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            padding: '16px 18px',
+            background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)',
+            borderRadius: 12, textAlign: 'center',
+          }}>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 15, fontWeight: 900, color: '#00FF88', marginBottom: 4 }}>
+              Volume Bot activated.
+            </div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280' }}>
+              Trading activity will start within 2 minutes.
+            </div>
+            <button onClick={onDismiss} style={{
+              marginTop: 14, padding: '10px 24px',
+              background: 'transparent', border: '1px solid #1E1E2E',
+              borderRadius: 8, cursor: 'pointer',
+              fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280',
+            }}>
+              Go to My Tokens
+            </button>
+          </div>
+        )}
+      </div>
+
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+    </div>
+  )
+}
+
 function DeployPageContent() {
   const searchParams = useSearchParams()
   const router       = useRouter()
@@ -410,67 +697,14 @@ function DeployPageContent() {
         </div>
       )}
 
-      {/* Success state */}
+      {/* Post-deploy modal */}
       {status === 'success' && result && (
-        <div style={{
-          background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)',
-          borderRadius: 12, padding: '20px', marginBottom: 20,
-        }}>
-          <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 800, color: '#00FF88', marginBottom: 12 }}>
-            Token is live.
-          </div>
-          <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280', marginBottom: 4 }}>
-            CONTRACT ADDRESS
-          </div>
-          <div style={{
-            fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#F9FAFB',
-            wordBreak: 'break-all', marginBottom: 14,
-          }}>
-            {result.contractAddress}
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <a
-              href={result.explorerUrl}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '7px 14px', background: '#00FF88', color: '#0A0A0F',
-                border: 'none', borderRadius: 6,
-                fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 700,
-                textDecoration: 'none',
-              }}
-            >
-              <IconTrendingUp size={13} color="#0A0A0F" />
-              View Token
-            </a>
-            <a
-              href={result.txUrl}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '7px 14px', background: 'transparent', color: '#9CA3AF',
-                border: '1px solid #1E1E2E', borderRadius: 6,
-                fontFamily: 'IBM Plex Mono, monospace', fontSize: 11,
-                textDecoration: 'none',
-              }}
-            >
-              View Tx
-            </a>
-            <button
-              onClick={() => router.push('/dashboard')}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '7px 14px', background: 'transparent', color: '#9CA3AF',
-                border: '1px solid #1E1E2E', borderRadius: 6,
-                fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, cursor: 'pointer',
-              }}
-            >
-              Dashboard
-            </button>
-          </div>
-        </div>
+        <PostDeployModal
+          result={result}
+          draft={draft}
+          chain={chain}
+          onDismiss={() => router.push('/dashboard/tokens')}
+        />
       )}
 
       {/* Error */}
