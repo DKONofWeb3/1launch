@@ -520,9 +520,10 @@ function DeployPageContent() {
         if (!config?.factoryAddress || !bscAddress) {
           setStatus('pending')
           const res = await api.post('/api/deploy/server-side', {
-            draft_id: draftId,
-            chain: 'bsc',
-            network: 'mainnet',
+            draft_id:       draftId,
+            chain:          'bsc',
+            network:        'mainnet',
+            wallet_address: bscAddress || '',
           })
           if (!res.data.success) throw new Error(res.data.error)
           setStatus('success')

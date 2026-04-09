@@ -35,7 +35,7 @@ async function runNarrativeCron() {
     const scored = clusters
       .map(c => ({ ...c, hype_score: computeHypeScore(c.signals) }))
       .sort((a, b) => b.hype_score - a.hype_score)
-      .slice(0, 8)
+      .slice(0, 15)
 
     // ── Fetch existing active narratives to deduplicate ───────────────────────
     const { data: existing } = await supabase
