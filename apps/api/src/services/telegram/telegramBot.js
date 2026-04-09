@@ -245,14 +245,22 @@ function setupHandlers(bot) {
         return ctx.reply('You already have a hot narrative alert active.', mainKeyboard())
       }
 
-      await supabase.from('price_alerts').insert({
+      const { error: insertErr } = await supabase.from('price_alerts').insert({
         telegram_chat_id: tgId,
         alert_type:       'narrative',
         triggered:        false,
         created_at:       new Date().toISOString(),
       })
+
+      if (insertErr) {
+        console.error('[TG alert_narrative] insert failed:', insertErr.message)
+        return ctx.reply('Failed to save alert: ' + insertErr.message, mainKeyboard())
+      }
+
+      console.log('[TG] Narrative alert saved for:', tgId)
       ctx.reply('Done. You will be notified when a narrative scores 80+.', mainKeyboard())
-    } catch {
+    } catch (err) {
+      console.error('[TG alert_narrative] error:', err.message)
       ctx.reply('Failed to set alert.', mainKeyboard())
     }
   })
@@ -429,13 +437,16 @@ function setupHandlers(bot) {
     await ctx.answerCbQuery()
     const tgId = getTgId(ctx)
 
-    const { data } = await supabase
+    const { data, error: listErr } = await supabase
       .from('price_alerts')
       .select('*')
       .eq('telegram_chat_id', tgId)
       .eq('triggered', false)
       .not('alert_type', 'like', 'pending_%')
 
+    console.log('[TG] alert_list for', tgId, '— found:', data?.length, 'error:', listErr?.message)
+
+    if (listErr) return ctx.reply('Failed to load alerts: ' + listErr.message, mainKeyboard())
     if (!data?.length) return ctx.reply('No active alerts.', mainKeyboard())
 
     const lines = data.map(a => {
