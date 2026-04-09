@@ -234,10 +234,9 @@ function setupHandlers(bot) {
     try {
       // Check if already set
       const { data: existing } = await supabase
-        .from('price_alerts')
+        .from('narrative_alerts')
         .select('id')
         .eq('telegram_chat_id', tgId)
-        .eq('alert_type', 'narrative')
         .eq('triggered', false)
         .maybeSingle()
 
@@ -245,9 +244,8 @@ function setupHandlers(bot) {
         return ctx.reply('You already have a hot narrative alert active.', mainKeyboard())
       }
 
-      const { error: insertErr } = await supabase.from('price_alerts').insert({
+      const { error: insertErr } = await supabase.from('narrative_alerts').insert({
         telegram_chat_id: tgId,
-        alert_type:       'narrative',
         triggered:        false,
         created_at:       new Date().toISOString(),
       })
@@ -437,20 +435,17 @@ function setupHandlers(bot) {
     await ctx.answerCbQuery()
     const tgId = getTgId(ctx)
 
-    const { data, error: listErr } = await supabase
-      .from('price_alerts')
-      .select('*')
-      .eq('telegram_chat_id', tgId)
-      .eq('triggered', false)
-      .not('alert_type', 'like', 'pending_%')
+    const [{ data: priceAlerts, error: priceErr }, { data: narAlerts, error: narErr }] = await Promise.all([
+      supabase.from('price_alerts').select('*').eq('telegram_chat_id', tgId).eq('triggered', false),
+      supabase.from('narrative_alerts').select('*').eq('telegram_chat_id', tgId).eq('triggered', false),
+    ])
 
-    console.log('[TG] alert_list for', tgId, '— found:', data?.length, 'error:', listErr?.message)
+    const allAlerts = [...(priceAlerts || []), ...(narAlerts || []).map(a => ({ ...a, alert_type: 'narrative' }))]
 
-    if (listErr) return ctx.reply('Failed to load alerts: ' + listErr.message, mainKeyboard())
-    if (!data?.length) return ctx.reply('No active alerts.', mainKeyboard())
+    if (!allAlerts.length) return ctx.reply('No active alerts.', mainKeyboard())
 
-    const lines = data.map(a => {
-      if (a.alert_type === 'narrative') return 'Hot narrative (80+)'
+    const lines = allAlerts.map(a => {
+      if (a.alert_type === 'narrative') return 'Hot narrative alert (80+)'
       if (a.alert_type === 'mcap')      return `MCap ${fmt(a.target_price)} — ${a.contract_address?.slice(0, 10)}... (${a.chain?.toUpperCase()})`
       return `Price $${a.target_price} — ${a.contract_address?.slice(0, 10)}... (${a.chain?.toUpperCase()})`
     }).join('\n')
@@ -462,7 +457,10 @@ function setupHandlers(bot) {
   bot.action('alert_clear', async (ctx) => {
     await ctx.answerCbQuery()
     const tgId = getTgId(ctx)
-    await supabase.from('price_alerts').update({ triggered: true }).eq('telegram_chat_id', tgId).eq('triggered', false)
+    await Promise.all([
+      supabase.from('price_alerts').update({ triggered: true }).eq('telegram_chat_id', tgId).eq('triggered', false),
+      supabase.from('narrative_alerts').update({ triggered: true }).eq('telegram_chat_id', tgId).eq('triggered', false),
+    ])
     ctx.reply('All alerts cleared.', mainKeyboard())
   })
 
@@ -739,9 +737,8 @@ async function checkPriceAlerts() {
 
     // Narrative alerts
     const { data: narAlerts } = await supabase
-      .from('price_alerts')
+      .from('narrative_alerts')
       .select('telegram_chat_id')
-      .eq('alert_type', 'narrative')
       .eq('triggered', false)
 
     if (narAlerts?.length) {
