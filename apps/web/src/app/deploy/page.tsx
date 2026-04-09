@@ -311,32 +311,44 @@ function PostDeployModal({
           borderRadius: 12, padding: '16px 18px',
         }}>
           <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.12em', marginBottom: 14 }}>
-            SET IT UP FOR ATTENTION
+            NEXT STEPS
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[
-              { label: 'Setup Telegram', sub: 'Start building community', href: '#' },
-              { label: 'Auto Audit Scan', sub: 'Builds buyer trust instantly', href: '#' },
-            ].map(action => (
-              <a key={action.label} href={action.href} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 14px',
-                background: '#0A0A0F', border: '1px solid #1E1E2E',
-                borderRadius: 8, textDecoration: 'none',
-              }}>
-                <div>
-                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 600, color: '#F9FAFB', marginBottom: 2 }}>
-                    {action.label}
-                  </div>
-                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>
-                    {action.sub}
-                  </div>
+            {/* Step 1 — Add Liquidity */}
+            <a
+              href={chain === 'bsc'
+                ? `https://pancakeswap.finance/add/${result.contractAddress}`
+                : `https://raydium.io/liquidity/create-pool/`}
+              target="_blank" rel="noreferrer"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 8, textDecoration: 'none' }}>
+              <div>
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#F9FAFB', marginBottom: 2 }}>
+                  1. Add Liquidity
                 </div>
-                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', fontWeight: 700 }}>
-                  free
-                </span>
-              </a>
-            ))}
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>
+                  {chain === 'bsc' ? 'PancakeSwap — opens with your token pre-filled' : 'Raydium — create liquidity pool'}
+                </div>
+              </div>
+              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', fontWeight: 700 }}>free</span>
+            </a>
+
+            {/* Step 2 — Lock LP */}
+            <a
+              href={chain === 'bsc'
+                ? `https://app.unicrypt.network/amm/pancake-v2/pair`
+                : `https://app.unicrypt.network/amm/raydium/pair`}
+              target="_blank" rel="noreferrer"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 8, textDecoration: 'none' }}>
+              <div>
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#F9FAFB', marginBottom: 2 }}>
+                  2. Lock LP via Unicrypt
+                </div>
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>
+                  Builds trust — degens check this before buying
+                </div>
+              </div>
+              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', fontWeight: 700 }}>free</span>
+            </a>
             {/* Share on X */}
             <button onClick={copyTweet} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -496,6 +508,18 @@ function DeployPageContent() {
 
   const { deploy: deployBSC, address: bscAddress } = useBSCDeploy()
 
+  // Detect TG environment
+  const [isTelegram,    setIsTelegram]    = useState(false)
+  const [tgWalletGate,  setTgWalletGate]  = useState(false) // shows wallet required screen
+
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp
+    const stored = (() => { try { return localStorage.getItem('tg_user') } catch { return null } })()
+    if ((tg?.initData && tg.initData.length > 0) || stored) {
+      setIsTelegram(true)
+    }
+  }, [])
+
   // Load draft + chain config
   useEffect(() => {
     if (!draftId) return
@@ -509,6 +533,11 @@ function DeployPageContent() {
   }, [draftId, chain])
 
   async function handleDeploy() {
+    // TG users must connect a wallet to receive their tokens
+    if (isTelegram && !bscAddress) {
+      setTgWalletGate(true)
+      return
+    }
     setError(null)
     setStatus('waiting_wallet')
 
@@ -619,6 +648,42 @@ function DeployPageContent() {
         <span style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#6B7280', fontSize: 12 }}>
           Loading draft...
         </span>
+      </div>
+    )
+  }
+
+  // TG user hit deploy without wallet — require them to connect
+  if (tgWalletGate) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: '24px 20px', textAlign: 'center' }}>
+        <div style={{ width: 52, height: 52, borderRadius: 13, background: '#00FF88', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#0A0A0F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 900, color: '#F9FAFB', letterSpacing: '-0.5px', marginBottom: 10 }}>
+          Connect Wallet to Receive Tokens
+        </h2>
+        <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', marginBottom: 10, maxWidth: 300, lineHeight: 1.7 }}>
+          You need a wallet to receive your token supply. 100% of tokens go to your wallet on deploy.
+        </p>
+        <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#4B5563', marginBottom: 28, maxWidth: 300, lineHeight: 1.7 }}>
+          Open this page in MetaMask or Phantom browser, or connect via WalletConnect.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 300 }}>
+          <a href={`https://metamask.app.link/dapp/${typeof window !== 'undefined' ? window.location.host + window.location.pathname + window.location.search : ''}`}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '13px 20px', background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 10, fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700, color: '#F9FAFB', textDecoration: 'none' }}>
+            Open in MetaMask
+          </a>
+          <a href={`https://phantom.app/ul/browse/${typeof window !== 'undefined' ? window.location.host + window.location.pathname + window.location.search : ''}?ref=${typeof window !== 'undefined' ? window.location.host : ''}`}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '13px 20px', background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 10, fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700, color: '#F9FAFB', textDecoration: 'none' }}>
+            Open in Phantom
+          </a>
+          <ConnectButton showBalance={false} accountStatus="avatar" chainStatus="icon" />
+        </div>
+        <button onClick={() => setTgWalletGate(false)} style={{ marginTop: 20, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#374151' }}>
+          Cancel
+        </button>
       </div>
     )
   }
