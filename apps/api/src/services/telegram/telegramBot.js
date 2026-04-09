@@ -50,7 +50,7 @@ async function getOrCreateUser(ctx) {
       return existing
     }
 
-    const { data: newUser } = await supabase
+    const { data: newUser, error: insertErr } = await supabase
       .from('users')
       .insert({
         telegram_id:       tgId,
@@ -61,6 +61,12 @@ async function getOrCreateUser(ctx) {
       })
       .select('id, wallet_address, plan')
       .single()
+
+    if (insertErr) {
+      console.warn('[TG] insert failed:', insertErr.message)
+      // Return a minimal user object so bot doesn't crash
+      return { id: null, wallet_address: null, plan: 'free' }
+    }
 
     console.log(`[TG] New user: ${ctx.from.username || tgId}`)
     return newUser
@@ -148,7 +154,13 @@ function setupHandlers(bot) {
   // ── My Tokens ───────────────────────────────────────────────────────────────
   bot.hears(['My Tokens', '/mytokens'], async (ctx) => {
     const user = await getOrCreateUser(ctx)
-    if (!user) return ctx.reply('Something went wrong. Try /start again.', mainKeyboard())
+    if (!user) {
+      const appUrl = getAppUrl()
+      return ctx.reply(
+        'No tokens launched yet. Launch your first token from the feed.',
+        appUrl ? Markup.inlineKeyboard([[Markup.button.url('Browse Narratives', `${appUrl}/dashboard`)]]) : {}
+      )
+    }
 
     try {
       const { data: tokens } = await supabase
