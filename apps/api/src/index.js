@@ -129,10 +129,15 @@ cron.schedule('0 9 * * *', async () => {
 })
 
 // Price alert check every 5 minutes
-const { runPriceAlertCheck, runNarrativeAlertCheck } = require('./cron/priceAlertCron')
+const { runPriceAlertCheck }    = require('./cron/priceAlertCron')
+const { runNarrativeAlertCron } = require('./cron/narrativeAlertCron')
+
 cron.schedule('*/5 * * * *', () => {
   runPriceAlertCheck().catch(() => {})
-  runNarrativeAlertCheck().catch(() => {})
+})
+
+cron.schedule('*/10 * * * *', () => {
+  runNarrativeAlertCron().catch(() => {})
 })
 
 // Copycat scan every hour
