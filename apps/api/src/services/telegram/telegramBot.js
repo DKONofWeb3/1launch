@@ -511,17 +511,107 @@ function setupHandlers(bot) {
     const appUrl = getAppUrl()
 
     const wallet = user?.wallet_address
-      ? `Wallet: \`${user.wallet_address.slice(0, 8)}...${user.wallet_address.slice(-4)}\``
-      : 'No wallet linked'
+      ? `Wallet linked: \`${user.wallet_address.slice(0, 8)}...${user.wallet_address.slice(-4)}\``
+      : 'No wallet linked yet'
     const plan = `Plan: *${user?.plan || 'free'}*`
 
+    const linkInstructions = !user?.wallet_address
+      ? '\n\nTo link your wallet, paste your wallet address here (BSC or Solana). Make sure you have already connected that wallet on 1launch web first.'
+      : ''
+
     await ctx.reply(
-      `*Your Account*\n\n${wallet}\n${plan}\n\nLink your wallet on the web app to sync your tokens across TG and web.`,
+      `*Your Account*\n\n${wallet}\n${plan}${linkInstructions}`,
       {
         parse_mode: 'Markdown',
-        ...(appUrl ? Markup.inlineKeyboard([[Markup.button.url('Open Dashboard', `${appUrl}/dashboard`)]]) : {}),
+        ...(appUrl && !user?.wallet_address
+          ? Markup.inlineKeyboard([[Markup.button.url('Connect on Web First', `${appUrl}/dashboard`)]])
+          : {}),
       }
     )
+  })
+
+  // ── Wallet address message handler ───────────────────────────────────────────
+  // Detects when user pastes a wallet address (BSC 0x... or Solana base58)
+  bot.on('text', async (ctx) => {
+    const text = ctx.message.text.trim()
+
+    // Ignore if it's a command or button press
+    if (text.startsWith('/')) return
+    const knownButtons = ['Narratives', 'Launch Token', 'My Tokens', 'Alerts', 'Market', 'Subscribe', 'Settings', 'Help']
+    if (knownButtons.includes(text)) return
+
+    // Detect wallet address format
+    const isBSC     = /^0x[a-fA-F0-9]{40}$/.test(text)
+    const isSolana  = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(text)
+
+    if (!isBSC && !isSolana) return // not a wallet address, ignore
+
+    const tgId   = getTgId(ctx)
+    const appUrl = getAppUrl()
+
+    await ctx.reply('Checking wallet...')
+
+    try {
+      // Check if this wallet exists in the system
+      const { data: existingWalletUser } = await supabase
+        .from('users')
+        .select('id, telegram_id, wallet_address')
+        .eq('wallet_address', text.toLowerCase())
+        .maybeSingle()
+
+      if (!existingWalletUser) {
+        // Wallet not in system — they haven't connected it on web yet
+        return ctx.reply(
+          `This wallet has not been connected to 1launch yet.\n\nYou need to:\n1. Open 1launch in your MetaMask or Phantom browser\n2. Connect this wallet\n3. Come back here and paste it again`,
+          appUrl
+            ? Markup.inlineKeyboard([[Markup.button.url('Open 1launch', `${appUrl}/dashboard`)]])
+            : {}
+        )
+      }
+
+      // Wallet exists — get the TG user
+      const { data: tgUser } = await supabase
+        .from('users')
+        .select('id, wallet_address')
+        .eq('telegram_id', tgId)
+        .maybeSingle()
+
+      if (tgUser) {
+        // Link wallet to TG user
+        await supabase
+          .from('users')
+          .update({ wallet_address: text.toLowerCase() })
+          .eq('telegram_id', tgId)
+
+        // Also update the wallet's existing record with TG info if different
+        if (existingWalletUser.id !== tgUser.id) {
+          // Merge — copy telegram_id to the wallet's record, remove the separate TG record
+          await supabase
+            .from('users')
+            .update({ telegram_id: tgId, telegram_chat_id: String(ctx.chat?.id || ctx.from.id) })
+            .eq('id', existingWalletUser.id)
+        }
+      } else {
+        // No TG user yet — update the wallet record with TG info
+        await supabase
+          .from('users')
+          .update({
+            telegram_id:       tgId,
+            telegram_chat_id:  String(ctx.chat?.id || ctx.from.id),
+            telegram_username: ctx.from.username || null,
+          })
+          .eq('id', existingWalletUser.id)
+      }
+
+      const short = `${text.slice(0, 6)}...${text.slice(-4)}`
+      await ctx.reply(
+        `Wallet linked: \`${short}\`\n\nYour tokens and alerts are now synced. Tap My Tokens to see your launches.`,
+        { parse_mode: 'Markdown', ...mainKeyboard() }
+      )
+    } catch (err) {
+      console.error('[TG wallet link]', err.message)
+      ctx.reply('Something went wrong. Try again or use /start to reset.', mainKeyboard())
+    }
   })
 
   // ── Help ────────────────────────────────────────────────────────────────────
