@@ -450,7 +450,7 @@ function setupHandlers(bot) {
       return `Price $${a.target_price} — ${a.contract_address?.slice(0, 10)}... (${a.chain?.toUpperCase()})`
     }).join('\n')
 
-    ctx.reply(`*Active Alerts (${data.length})*\n\n${lines}`, { parse_mode: 'Markdown', ...mainKeyboard() })
+    ctx.reply(`*Active Alerts (${allAlerts.length})*\n\n${lines}`, { parse_mode: 'Markdown', ...mainKeyboard() })
   })
 
   // Clear alerts

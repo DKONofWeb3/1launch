@@ -60,4 +60,45 @@ async function runPriceAlertCheck() {
   }
 }
 
-module.exports = { runPriceAlertCheck }
+
+
+// ── Narrative alert checker ───────────────────────────────────────────────────
+async function runNarrativeAlertCheck() {
+  try {
+    const { data: alerts } = await supabase
+      .from('narrative_alerts')
+      .select('telegram_chat_id')
+      .eq('triggered', false)
+
+    if (!alerts?.length) return
+
+    // Check if any narrative just crossed 80+
+    const { data: hotNarratives } = await supabase
+      .from('narratives')
+      .select('id, title, hype_score')
+      .gte('hype_score', 80)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (!hotNarratives?.length) return
+
+    const n      = hotNarratives[0]
+    const appUrl = process.env.WEB_URL || ''
+    const msg    =
+      `*Hot narrative detected*\n\n` +
+      `*${n.title}*\nScore: ${n.hype_score}/100\n\n` +
+      (appUrl ? `Launch now: ${appUrl}/launch?narrative=${n.id}` : '')
+
+    for (const alert of alerts) {
+      await sendNotification(alert.telegram_chat_id, msg).catch(() => {})
+      await new Promise(r => setTimeout(r, 100))
+    }
+
+    console.log(`[PriceAlertCron] Narrative alert sent to ${alerts.length} users`)
+  } catch (err) {
+    console.error('[NarrativeAlertCheck]', err.message)
+  }
+}
+
+module.exports = { runPriceAlertCheck, runNarrativeAlertCheck }
