@@ -14,8 +14,8 @@ function mainKeyboard() {
   return Markup.keyboard([
     ['Narratives',  'Launch Token'],
     ['My Tokens',   'Alerts'],
-    ['Market',      'Subscribe'],
-    ['Settings',    'Help'],
+    ['Subscribe',   'Settings'],
+    ['Help'],
   ]).resize()
 }
 
@@ -489,34 +489,7 @@ function setupHandlers(bot) {
     }
   })
 
-  // ── Market ──────────────────────────────────────────────────────────────────
-  bot.hears(['Market', '/market'], async (ctx) => {
-    await ctx.reply('Fetching market data...')
-    try {
-      const axios = require('axios')
-      const res   = await axios.get('https://api.alternative.me/fng/', { timeout: 6000 })
-      const fg    = res.data?.data?.[0]
-      const value = parseInt(fg?.value || 50)
-      const label = fg?.value_classification || 'Neutral'
-      const bar   = '[' + '|'.repeat(Math.floor(value / 10)) + '-'.repeat(10 - Math.floor(value / 10)) + ']'
-
-      const { data: narratives } = await supabase
-        .from('narratives')
-        .select('title, hype_score')
-        .gt('expires_at', new Date().toISOString())
-        .order('hype_score', { ascending: false })
-        .limit(3)
-
-      let msg = `*Market Overview*\n\nFear & Greed: ${bar}\n${value}/100 — *${label}*\n\n`
-      if (narratives?.length) {
-        msg += `*Top Narratives Right Now:*\n`
-        narratives.forEach((n, i) => { msg += `${i + 1}. ${n.title} (${n.hype_score}/100)\n` })
-      }
-      const rec = value >= 70 ? 'Good time to launch.' : value >= 45 ? 'Decent conditions.' : 'Cautious market — launch anyway if narrative is strong.'
-      msg += `\n_${rec}_`
-      await ctx.reply(msg, { parse_mode: 'Markdown', ...mainKeyboard() })
-    } catch { ctx.reply('Failed to fetch market data.', mainKeyboard()) }
-  })
+  // Market command removed — not needed
 
   // ── Subscribe ───────────────────────────────────────────────────────────────
   bot.hears(['Subscribe', '/subscribe'], async (ctx) => {
@@ -547,7 +520,7 @@ function setupHandlers(bot) {
   // ── Help ────────────────────────────────────────────────────────────────────
   bot.hears(['Help', '/help'], async (ctx) => {
     await ctx.reply(
-      '*1launch Bot*\n\nNarratives — trending meme narratives\nLaunch Token — start a launch\nMy Tokens — your deployed tokens\nAlerts — price, mcap & narrative alerts\nMarket — Fear & Greed + top narratives\nSubscribe — view pricing\nSettings — account and wallet info',
+      '*1launch Bot*\n\nNarratives — trending meme narratives\nLaunch Token — start a launch\nMy Tokens — your deployed tokens\nAlerts — price, mcap & narrative alerts\nSubscribe — view pricing\nSettings — account and wallet info',
       { parse_mode: 'Markdown', ...mainKeyboard() }
     )
   })
