@@ -22,7 +22,6 @@ app.use(cors({
       'http://localhost:3000',
       'https://1launch-web.vercel.app',
     ].filter(Boolean)
-    // Allow requests with no origin (mobile apps, curl, Render health checks)
     if (!origin || allowed.includes(origin)) return callback(null, true)
     callback(new Error('Not allowed by CORS'))
   },
@@ -44,6 +43,9 @@ app.use('/api/launched-tokens',  launchedTokensRouter)
 
 const { telegramRouter }       = require('./routes/telegram')
 app.use('/api/telegram',         telegramRouter)
+
+const { paymentsRouter }       = require('./routes/payments')
+app.use('/api/payments',         paymentsRouter)
 
 const { memekitRouter }        = require('./routes/memekit')
 app.use('/api/memekit',          memekitRouter)
@@ -95,12 +97,13 @@ cron.schedule('*/2 * * * *', () => {
 // Auto-expire subscriptions every hour
 cron.schedule('0 * * * *', async () => {
   const { supabase } = require('./lib/supabase')
-  await supabase
-    .from('subscriptions')
-    .update({ status: 'expired' })
-    .eq('status', 'active')
-    .lt('expires_at', new Date().toISOString())
-    .catch(() => {})
+  try {
+    await supabase
+      .from('subscriptions')
+      .update({ status: 'expired' })
+      .eq('status', 'active')
+      .lt('expires_at', new Date().toISOString())
+  } catch {}
   console.log('[CRON] Expired subscriptions checked')
 })
 
@@ -109,12 +112,16 @@ cron.schedule('0 9 * * *', async () => {
   const { supabase } = require('./lib/supabase')
   const { sendNotification } = require('./services/telegram/telegramBot')
   const in3days = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: expiring } = await supabase
-    .from('subscriptions')
-    .select('user_id, plan_id, expires_at, users(telegram_chat_id)')
-    .eq('status', 'active')
-    .lt('expires_at', in3days)
-    .catch(() => ({ data: null }))
+
+  let expiring = null
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('user_id, plan_id, expires_at, users(telegram_chat_id)')
+      .eq('status', 'active')
+      .lt('expires_at', in3days)
+    expiring = data
+  } catch {}
 
   if (!expiring?.length) return
   for (const sub of expiring) {
@@ -140,11 +147,17 @@ cron.schedule('*/10 * * * *', () => {
   runNarrativeAlertCron().catch(() => {})
 })
 
-// Copycat scan every hour
+// Copycat scan every 30 minutes
 const { runCopycatScan } = require('./cron/copycatCron')
 cron.schedule('*/30 * * * *', () => {
   console.log('[CRON] Running copycat scan...')
   runCopycatScan()
+})
+
+// Daily digest at 8 AM UTC
+cron.schedule('0 8 * * *', async () => {
+  const { sendDailyDigest } = require('./services/telegram/telegramBot')
+  await sendDailyDigest().catch(() => {})
 })
 
 // ── Services on boot ──────────────────────────────────────────────────────────
@@ -153,10 +166,6 @@ startBot()
 
 const { restoreRunningSessions } = require('./services/bot/botManager')
 restoreRunningSessions()
-
-// Narrative cron runs on schedule only — not on startup
-// Uncomment line below to force a manual run:
-// runNarrativeCron()
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

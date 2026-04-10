@@ -6,6 +6,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { TokenLogo } from '@/components/launch/TokenLogo'
 import { IconBSC, IconSolana, IconTrendingUp, IconSignal } from '@/components/ui/Icons'
+import { useSendTransaction, useAccount } from 'wagmi'
+import { parseEther } from 'viem'
 
 function formatNumber(n: number): string {
   if (!n) return '$0'
@@ -27,6 +29,8 @@ function BoostModal({ contractAddress, chain, onClose }: {
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
   const [copied,  setCopied]  = useState(false)
+  const { address }                        = useAccount()
+  const { sendTransactionAsync: sendTransaction } = useSendTransaction()
 
   const tiers = [
     { id: 'starter', label: 'Starter', price: '$29', wallets: '3 wallets',  usd: 29  },
@@ -34,21 +38,47 @@ function BoostModal({ contractAddress, chain, onClose }: {
     { id: 'pro',     label: 'Pro',     price: '$149', wallets: '25 wallets', usd: 149 },
   ]
 
-  async function initiatePayment() {
+  async function payWithWallet() {
     if (!tier) return
     setLoading(true)
     setError(null)
     try {
-      const res = await api.post('/api/subscriptions/initiate', {
-        plan_id: `volbot_${tier}`,
-        chain:   'bsc',
-        token:   'BNB',
-        wallet:  'user',
+      const selected = tiers.find(t => t.id === tier)!
+
+      // Get BNB price to calculate amount
+      const bnbPrice = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd')
+        .then(r => r.json()).then(d => d.binancecoin.usd).catch(() => 603)
+      const bnbAmount = (selected.usd / bnbPrice).toFixed(6)
+
+      const platformWallet = process.env.NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS || ''
+      if (!platformWallet) throw new Error('Platform wallet not configured')
+
+      // Create payment record
+      const initRes = await api.post('/api/subscriptions/initiate', {
+        plan_id: `volbot_${tier}`, chain: 'bsc', token: 'BNB', wallet: address || 'user',
       })
-      if (res.data.success) { setPayData(res.data.data); setStep('pay') }
-      else setError(res.data.error || 'Failed to generate payment')
-    } catch (err: any) { setError(err.message) }
-    finally { setLoading(false) }
+      if (!initRes.data.success) throw new Error(initRes.data.error)
+      const paymentId = initRes.data.data.id
+
+      // Send BNB — MetaMask pops up
+      const txHash = await sendTransaction({
+        to:    platformWallet as `0x${string}`,
+        value: parseEther(bnbAmount),
+      })
+
+      if (!txHash) throw new Error('Transaction was not confirmed')
+
+      // Verify on backend
+      await api.post('/api/payments/verify-tx', {
+        tx_hash: txHash, chain: 'bsc', payment_id: paymentId,
+      })
+
+      setStep('done')
+    } catch (err: any) {
+      setError(err.message || 'Payment failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   function copyAddr() {
@@ -87,25 +117,7 @@ function BoostModal({ contractAddress, chain, onClose }: {
     </div>
   )
 
-  if (step === 'pay' && payData) return (
-    <div style={overlay}>
-      <div style={card}>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.12em', marginBottom: 16 }}>PAY TO ACTIVATE VOLUME BOT</div>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', marginBottom: 6 }}>SEND EXACTLY</div>
-        <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 900, color: '#00FF88', marginBottom: 14 }}>{payData.crypto_amount} BNB</div>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', marginBottom: 6 }}>TO ADDRESS</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          <div style={{ flex: 1, fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#9CA3AF', wordBreak: 'break-all', padding: '8px 10px', background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 6 }}>{payData.payment_address}</div>
-          <button onClick={copyAddr} style={{ padding: '8px 12px', background: copied ? 'rgba(0,255,136,0.1)' : 'transparent', border: `1px solid ${copied ? 'rgba(0,255,136,0.3)' : '#1E1E2E'}`, borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: copied ? '#00FF88' : '#6B7280', flexShrink: 0 }}>{copied ? 'Copied' : 'Copy'}</button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: 6, marginBottom: 16 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00FF88', animation: 'pulse 1.5s infinite' }} />
-          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280' }}>Listening — auto-activates on payment detection</span>
-        </div>
-        <button onClick={onClose} style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 8, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#4B5563' }}>Cancel</button>
-      </div>
-    </div>
-  )
+
 
   return (
     <div style={overlay}>
@@ -138,8 +150,8 @@ function BoostModal({ contractAddress, chain, onClose }: {
         </div>
         {error && <div style={{ padding: '8px 12px', background: 'rgba(255,59,59,0.08)', border: '1px solid rgba(255,59,59,0.2)', borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#FF6B6B', marginBottom: 12 }}>{error}</div>}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={initiatePayment} disabled={!tier || loading} style={{ flex: 2, padding: '12px 0', background: tier && !loading ? '#00FF88' : '#1E1E2E', border: 'none', borderRadius: 8, cursor: tier && !loading ? 'pointer' : 'not-allowed', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: tier && !loading ? '#0A0A0F' : '#374151' }}>
-            {loading ? 'Generating...' : 'Boost My Token'}
+          <button onClick={payWithWallet} disabled={!tier || loading} style={{ flex: 2, padding: '12px 0', background: tier && !loading ? '#00FF88' : '#1E1E2E', border: 'none', borderRadius: 8, cursor: tier && !loading ? 'pointer' : 'not-allowed', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: tier && !loading ? '#0A0A0F' : '#374151' }}>
+            {loading ? 'Confirm in MetaMask...' : 'Boost My Token'}
           </button>
           <button onClick={onClose} style={{ flex: 1, padding: '12px 0', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 8, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563' }}>Cancel</button>
         </div>

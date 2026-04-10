@@ -5,6 +5,10 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAccount, useWalletClient, usePublicClient } from 'wagmi'
 import { parseEventLogs } from 'viem'
+import { parseEther } from 'viem'
+import { useSendTransaction } from 'wagmi'
+import { useWallet, useConnection } from '@solana/wallet-adapter-react'
+import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { api } from '@/lib/api'
 import { TokenLogo } from '@/components/launch/TokenLogo'
 import { IconRocket } from '@/components/ui/Icons'
@@ -48,6 +52,33 @@ const FACTORY_ABI = [
     ],
   },
 ] as const
+
+// ── Solana direct payment hook ───────────────────────────────────────────────
+function useSolanaPayment() {
+  const { publicKey, sendTransaction } = useWallet()
+  const { connection }                 = useConnection()
+
+  async function paySOL(amountSOL: number, toAddress: string): Promise<string> {
+    if (!publicKey) throw new Error('Solana wallet not connected')
+
+    const toPubkey    = new PublicKey(toAddress)
+    const lamports    = Math.round(amountSOL * LAMPORTS_PER_SOL)
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({ fromPubkey: publicKey, toPubkey, lamports })
+    )
+
+    const { blockhash } = await connection.getLatestBlockhash()
+    transaction.recentBlockhash = blockhash
+    transaction.feePayer        = publicKey
+
+    const signature = await sendTransaction(transaction, connection)
+    // Wait for confirmation
+    await connection.confirmTransaction(signature, 'confirmed')
+    return signature
+  }
+
+  return { paySOL, publicKey }
+}
 
 // ── Status indicator ──────────────────────────────────────────────────────────
 function StatusIndicator({ status }: { status: DeployStatus }) {
@@ -497,6 +528,10 @@ function DeployPageContent() {
   const [tgWalletGate,   setTgWalletGate]   = useState(false)
 
   const { deploy: deployBSC, address: bscAddress } = useBSCDeploy()
+  const { paySOL, publicKey: solPublicKey }          = useSolanaPayment()
+  const { sendTransaction: sendBNB }                  = useSendTransaction()
+  const [payingNow,  setPayingNow]  = useState(false)
+  const [payError,   setPayError]   = useState<string | null>(null)
 
   useEffect(() => {
     const tg     = (window as any).Telegram?.WebApp
@@ -572,26 +607,40 @@ function DeployPageContent() {
     }
   }
 
-  async function initiatePayment() {
-    setPaymentLoading(true)
-    setPaymentError(null)
+  async function payWithSolanaWallet() {
+    setPayingNow(true)
+    setPayError(null)
     try {
-      const res = await api.post('/api/subscriptions/initiate', {
-        plan_id: 'deploy_fee', chain: 'solana', token: 'SOL', wallet: bscAddress || 'tg_user',
-      })
-      if (res.data.success) setPaymentData(res.data.data)
-      else setPaymentError(res.data.error || 'Failed')
-    } catch (err: any) {
-      setPaymentError(err.message)
-    } finally {
-      setPaymentLoading(false)
-    }
-  }
+      // Get SOL amount for $6
+      const solPrice = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd')
+        .then(r => r.json()).then(d => d.solana.usd).catch(() => 81)
+      const solAmount  = parseFloat((6 / solPrice).toFixed(6))
+      const toAddress  = process.env.NEXT_PUBLIC_SOLANA_PLATFORM_WALLET || ''
 
-  function copyPayAddress() {
-    if (!paymentData?.payment_address) return
-    navigator.clipboard.writeText(paymentData.payment_address)
-    setCopied(true); setTimeout(() => setCopied(false), 2000)
+      if (!toAddress) throw new Error('Platform wallet not configured')
+
+      // Creates payment record first
+      const initRes = await api.post('/api/subscriptions/initiate', {
+        plan_id: 'deploy_fee', chain: 'solana', token: 'SOL',
+        wallet: solPublicKey?.toBase58() || 'tg_user',
+      })
+      if (!initRes.data.success) throw new Error(initRes.data.error)
+      const paymentId = initRes.data.data.id
+
+      // Send SOL from wallet — Phantom/Solflare pops up
+      const signature = await paySOL(solAmount, toAddress)
+
+      // Verify tx on backend
+      await api.post('/api/payments/verify-tx', {
+        tx_hash: signature, chain: 'solana', payment_id: paymentId,
+      })
+
+      setPaymentPaid(true)
+    } catch (err: any) {
+      setPayError(err.message || 'Payment failed')
+    } finally {
+      setPayingNow(false)
+    }
   }
 
   if (loading) return (
@@ -689,28 +738,33 @@ function DeployPageContent() {
             <div style={{ background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 12, padding: '18px 20px' }}>
               <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280', letterSpacing: '0.12em', marginBottom: 12 }}>STEP 1 — PAY DEPLOY FEE</div>
               <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 900, color: '#F9FAFB', marginBottom: 14 }}>$6 in SOL</div>
-              {!paymentData ? (
-                <>
-                  {paymentError && <div style={{ padding: '8px 12px', background: 'rgba(255,59,59,0.08)', border: '1px solid rgba(255,59,59,0.2)', borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#FF6B6B', marginBottom: 10 }}>{paymentError}</div>}
-                  <button onClick={initiatePayment} disabled={paymentLoading} style={{ width: '100%', padding: '11px', background: paymentLoading ? '#1E1E2E' : '#00FF88', color: '#0A0A0F', border: 'none', borderRadius: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, cursor: paymentLoading ? 'not-allowed' : 'pointer' }}>
-                    {paymentLoading ? 'Generating...' : 'Generate Payment Address'}
-                  </button>
-                </>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 20, fontWeight: 900, color: '#00FF88' }}>{paymentData.crypto_amount} SOL</div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <div style={{ flex: 1, fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#9CA3AF', wordBreak: 'break-all', padding: '8px 10px', background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 6 }}>{paymentData.payment_address}</div>
-                    <button onClick={copyPayAddress} style={{ padding: '8px 12px', background: copied ? 'rgba(0,255,136,0.1)' : 'transparent', border: `1px solid ${copied ? 'rgba(0,255,136,0.3)' : '#1E1E2E'}`, borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: copied ? '#00FF88' : '#6B7280', cursor: 'pointer', flexShrink: 0 }}>
-                      {copied ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: 6 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00FF88', animation: 'pulse 1.5s infinite' }} />
-                    <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280' }}>Listening for payment...</span>
-                  </div>
+              {payError && (
+                <div style={{ padding: '8px 12px', background: 'rgba(255,59,59,0.08)', border: '1px solid rgba(255,59,59,0.2)', borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#FF6B6B', marginBottom: 10 }}>
+                  {payError}
                 </div>
               )}
+              {!solPublicKey ? (
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280', textAlign: 'center', padding: '12px 0' }}>
+                  Connect your Solana wallet (Phantom / Solflare) to pay
+                </div>
+              ) : (
+                <button
+                  onClick={payWithSolanaWallet}
+                  disabled={payingNow}
+                  style={{
+                    width: '100%', padding: '13px',
+                    background: payingNow ? '#1E1E2E' : '#00FF88',
+                    color: '#0A0A0F', border: 'none', borderRadius: 8,
+                    fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700,
+                    cursor: payingNow ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {payingNow ? 'Confirm in wallet...' : 'Pay $6 in SOL'}
+                </button>
+              )}
+              <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#374151', marginTop: 8 }}>
+                Your Solana wallet will open to confirm the payment.
+              </p>
             </div>
           )}
 
