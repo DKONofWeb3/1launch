@@ -226,124 +226,69 @@ function BoostModal({ contractAddress, chain, draftId, onClose }: {
   draftId: string
   onClose: () => void
 }) {
-  const [tier,        setTier]        = useState<string | null>(null)
-  const [step,        setStep]        = useState<'select' | 'pay' | 'done'>('select')
-  const [payData,     setPayData]     = useState<any>(null)
-  const [loading,     setLoading]     = useState(false)
-  const [error,       setError]       = useState<string | null>(null)
-  const [copied,      setCopied]      = useState(false)
+  const [tier,    setTier]    = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [done,    setDone]    = useState(false)
+  const [error,   setError]   = useState<string | null>(null)
+  const { address }                       = useAccount()
+  const { sendTransactionAsync: sendBNB } = useSendTransaction()
 
   const tiers = [
-    { id: 'starter', label: 'Starter', price: '$29', wallets: '3 wallets',  usd: 29  },
-    { id: 'growth',  label: 'Growth',  price: '$79', wallets: '10 wallets', usd: 79, popular: true },
-    { id: 'pro',     label: 'Pro',     price: '$149', wallets: '25 wallets', usd: 149 },
+    { id: 'starter', label: 'Starter', price: '$19', wallets: '3 wallets',  usd: 19 },
+    { id: 'growth',  label: 'Growth',  price: '$49', wallets: '10 wallets', usd: 49, popular: true },
+    { id: 'pro',     label: 'Pro',     price: '$99', wallets: '25 wallets', usd: 99 },
   ]
 
-  async function initiateBoostPayment() {
-    if (!tier) return
+  async function payWithWallet() {
+    if (!tier || !address) return
     setLoading(true)
     setError(null)
     try {
       const selected = tiers.find(t => t.id === tier)!
-      const res = await api.post('/api/subscriptions/initiate', {
-        plan_id: `volbot_${tier}`,
-        chain:   'bsc',
-        token:   'BNB',
-        usd:     selected.usd,
-        wallet:  'user',
-        meta:    { contract_address: contractAddress, draft_id: draftId },
+
+      const bnbPrice = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd')
+        .then(r => r.json()).then(d => d.binancecoin.usd).catch(() => 603)
+      const bnbAmount = (selected.usd / bnbPrice).toFixed(6)
+
+      const platformWallet = process.env.NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS as `0x${string}`
+      if (!platformWallet) throw new Error('Platform wallet not configured')
+
+      const initRes = await api.post('/api/subscriptions/initiate', {
+        plan_id: `volbot_${tier}`, chain: 'bsc', token: 'BNB', wallet: address,
+        meta: { contract_address: contractAddress, draft_id: draftId },
       })
-      if (res.data.success) {
-        setPayData(res.data.data)
-        setStep('pay')
-      } else {
-        setError(res.data.error || 'Failed to generate payment')
-      }
+      if (!initRes.data.success) throw new Error(initRes.data.error)
+      const paymentId = initRes.data.data.id
+
+      const txHash = await sendBNB({ to: platformWallet, value: parseEther(bnbAmount) })
+      if (!txHash) throw new Error('Transaction cancelled')
+
+      await api.post('/api/payments/verify-tx', { tx_hash: txHash, chain: 'bsc', payment_id: paymentId })
+
+      setDone(true)
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message || 'Payment failed')
     } finally {
       setLoading(false)
     }
   }
 
-  function copyPayAddress() {
-    navigator.clipboard.writeText(payData.payment_address)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  // Poll for payment
-  useEffect(() => {
-    if (step !== 'pay' || !payData?.id) return
-    const iv = setInterval(async () => {
-      try {
-        const res = await api.get(`/api/subscriptions/payment-status/${payData.id}`)
-        if (res.data.data?.status === 'confirmed') {
-          setStep('done')
-          clearInterval(iv)
-        }
-      } catch {}
-    }, 5000)
-    return () => clearInterval(iv)
-  }, [step, payData?.id])
-
   const overlay: React.CSSProperties = {
     position: 'fixed', inset: 0, zIndex: 300,
-    background: 'rgba(10,10,15,0.94)',
-    backdropFilter: 'blur(12px)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: '24px 20px',
+    background: 'rgba(10,10,15,0.94)', backdropFilter: 'blur(12px)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px',
   }
-
   const card: React.CSSProperties = {
     background: '#0E0E16', border: '1px solid #1E1E2E',
-    borderRadius: 16, padding: '24px',
-    maxWidth: 440, width: '100%',
-    animation: 'slideUp 0.25s ease both',
+    borderRadius: 16, padding: '24px', maxWidth: 440, width: '100%',
   }
 
-  if (step === 'done') return (
+  if (done) return (
     <div style={overlay}>
       <div style={{ ...card, textAlign: 'center' }}>
-        <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 900, color: '#00FF88', marginBottom: 8 }}>
-          Volume Bot activated.
-        </div>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
-          Trading activity will start within 2 minutes.
-        </div>
-        <button onClick={onClose} style={{ padding: '10px 24px', background: '#00FF88', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#0A0A0F' }}>
-          Done
-        </button>
-      </div>
-    </div>
-  )
-
-  if (step === 'pay' && payData) return (
-    <div style={overlay}>
-      <div style={card}>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.12em', marginBottom: 16 }}>
-          PAY TO ACTIVATE VOLUME BOT
-        </div>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.1em', marginBottom: 6 }}>SEND EXACTLY</div>
-        <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 900, color: '#00FF88', marginBottom: 14 }}>
-          {payData.crypto_amount} BNB
-        </div>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.1em', marginBottom: 6 }}>TO ADDRESS</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          <div style={{ flex: 1, fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#9CA3AF', wordBreak: 'break-all', padding: '8px 10px', background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 6 }}>
-            {payData.payment_address}
-          </div>
-          <button onClick={copyPayAddress} style={{ padding: '8px 12px', background: copied ? 'rgba(0,255,136,0.1)' : 'transparent', border: `1px solid ${copied ? 'rgba(0,255,136,0.3)' : '#1E1E2E'}`, borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: copied ? '#00FF88' : '#6B7280', flexShrink: 0 }}>
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: 6, marginBottom: 16 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00FF88', animation: 'pulse 1.5s infinite' }} />
-          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280' }}>Listening for payment — auto-activates on confirmation</span>
-        </div>
-        <button onClick={onClose} style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 8, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#4B5563' }}>
-          Cancel
-        </button>
+        <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 900, color: '#00FF88', marginBottom: 8 }}>Volume Bot activated.</div>
+        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', marginBottom: 20 }}>Trading activity will start within 2 minutes.</div>
+        <button onClick={onClose} style={{ padding: '10px 24px', background: '#00FF88', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#0A0A0F' }}>Done</button>
       </div>
     </div>
   )
@@ -352,16 +297,10 @@ function BoostModal({ contractAddress, chain, draftId, onClose }: {
     <div style={overlay}>
       <div style={card}>
         <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.12em', marginBottom: 8 }}>VOLUME BOT</div>
-        <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 900, color: '#F9FAFB', marginBottom: 6 }}>
-          Don't let your chart go quiet.
-        </div>
-        <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280', lineHeight: 1.7, marginBottom: 4 }}>
-          Volume Bot simulates real trading activity so your token doesn't look dead at launch.
+        <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 900, color: '#F9FAFB', marginBottom: 6 }}>Don't let your chart go quiet.</div>
+        <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280', lineHeight: 1.7, marginBottom: 16 }}>
+          Simulates real trading activity so your token doesn't look dead. First 5 minutes matter most.
         </p>
-        <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#374151', marginBottom: 16 }}>
-          First 5 minutes matter most. Runs automatically. No setup needed.
-        </p>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
           {tiers.map(t => (
             <button key={t.id} onClick={() => setTier(t.id)} style={{
@@ -370,14 +309,9 @@ function BoostModal({ contractAddress, chain, draftId, onClose }: {
               background: tier === t.id ? 'rgba(0,255,136,0.06)' : '#0A0A0F',
               border: `1.5px solid ${tier === t.id ? 'rgba(0,255,136,0.3)' : '#1E1E2E'}`,
               borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left',
-              transition: 'all 0.15s',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{
-                  width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                  border: `2px solid ${tier === t.id ? '#00FF88' : '#2A2A3E'}`,
-                  background: tier === t.id ? '#00FF88' : 'transparent',
-                }} />
+                <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${tier === t.id ? '#00FF88' : '#2A2A3E'}`, background: tier === t.id ? '#00FF88' : 'transparent' }} />
                 <div>
                   <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#F9FAFB' }}>{t.label}</span>
                   {t.popular && <span style={{ marginLeft: 8, padding: '1px 6px', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 4, fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#00FF88', fontWeight: 700 }}>most used</span>}
@@ -388,83 +322,68 @@ function BoostModal({ contractAddress, chain, draftId, onClose }: {
             </button>
           ))}
         </div>
-
         {error && <div style={{ padding: '8px 12px', background: 'rgba(255,59,59,0.08)', border: '1px solid rgba(255,59,59,0.2)', borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#FF6B6B', marginBottom: 12 }}>{error}</div>}
-
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={initiateBoostPayment} disabled={!tier || loading} style={{
-            flex: 2, padding: '12px 0',
-            background: tier && !loading ? '#00FF88' : '#1E1E2E',
-            border: 'none', borderRadius: 8,
-            cursor: tier && !loading ? 'pointer' : 'not-allowed',
-            fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700,
-            color: tier && !loading ? '#0A0A0F' : '#374151',
-          }}>
-            {loading ? 'Generating...' : 'Boost My Token'}
+          <button onClick={payWithWallet} disabled={!tier || loading} style={{ flex: 2, padding: '12px 0', background: tier && !loading ? '#00FF88' : '#1E1E2E', border: 'none', borderRadius: 8, cursor: tier && !loading ? 'pointer' : 'not-allowed', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: tier && !loading ? '#0A0A0F' : '#374151' }}>
+            {loading ? 'Confirm in MetaMask...' : 'Boost My Token'}
           </button>
-          <button onClick={onClose} style={{ flex: 1, padding: '12px 0', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 8, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563' }}>
-            Cancel
-          </button>
+          <button onClick={onClose} style={{ flex: 1, padding: '12px 0', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 8, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#4B5563' }}>Cancel</button>
         </div>
       </div>
     </div>
   )
 }
 
+
 // ── Whitepaper add-on ────────────────────────────────────────────────────────
 function WhitepaperAddon({ contractAddress, draftId }: { contractAddress: string; draftId: string }) {
-  const [step,    setStep]    = useState<'idle' | 'pay' | 'generating' | 'done'>('idle')
-  const [payData, setPayData] = useState<any>(null)
-  const [doc,     setDoc]     = useState<string | null>(null)
-  const [copied,  setCopied]  = useState(false)
-  const { address }                        = useAccount()
-  const { sendTransactionAsync: sendBNB }  = useSendTransaction()
+  const [step,   setStep]   = useState<'idle' | 'paying' | 'generating' | 'done'>('idle')
+  const [error,  setError]  = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [doc,    setDoc]    = useState<string | null>(null)
+  const { address }                       = useAccount()
+  const { sendTransactionAsync: sendBNB } = useSendTransaction()
 
-  async function initiateWhitepaper() {
-    setStep('pay')
+  async function payAndGenerate() {
+    if (!address) { setError('Connect wallet first'); return }
+    setStep('paying')
+    setError(null)
     try {
-      // Create payment
-      const initRes = await api.post('/api/subscriptions/initiate', {
-        plan_id: 'whitepaper', chain: 'bsc', token: 'BNB', wallet: address || 'user',
-      })
-      if (!initRes.data.success) throw new Error(initRes.data.error)
-      const paymentId = initRes.data.data.id
-
-      // Get BNB price
       const bnbPrice = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd')
         .then(r => r.json()).then(d => d.binancecoin.usd).catch(() => 603)
       const bnbAmount = (15 / bnbPrice).toFixed(6)
       const platformWallet = process.env.NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS as `0x${string}`
+      if (!platformWallet) throw new Error('Platform wallet not configured')
 
-      // Send BNB via MetaMask
+      const initRes = await api.post('/api/subscriptions/initiate', {
+        plan_id: 'whitepaper', chain: 'bsc', token: 'BNB', wallet: address,
+      })
+      if (!initRes.data.success) throw new Error(initRes.data.error)
+      const paymentId = initRes.data.data.id
+
       const txHash = await sendBNB({ to: platformWallet, value: parseEther(bnbAmount) })
       if (!txHash) throw new Error('Transaction cancelled')
 
-      // Verify
       await api.post('/api/payments/verify-tx', { tx_hash: txHash, chain: 'bsc', payment_id: paymentId })
 
-      // Generate whitepaper
       setStep('generating')
       const res = await api.post('/api/whitepaper/generate', { draft_id: draftId, contract_address: contractAddress })
       if (res.data.success) {
-        setDoc(res.data.data.content)
+        setDoc(JSON.stringify(res.data.data))
         setStep('done')
       } else {
         throw new Error(res.data.error)
       }
     } catch (err: any) {
-      console.error('[Whitepaper]', err.message)
+      setError(err.message || 'Failed')
       setStep('idle')
     }
   }
 
-  if (step === 'done' && doc) return (
+  if (step === 'done') return (
     <div style={{ padding: '12px 14px', background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 8 }}>
-      <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#00FF88', marginBottom: 6 }}>Whitepaper generated</div>
-      <button onClick={() => { navigator.clipboard.writeText(doc); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-        style={{ padding: '6px 14px', background: 'transparent', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#00FF88' }}>
-        {copied ? 'Copied' : 'Copy Whitepaper'}
-      </button>
+      <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#00FF88', marginBottom: 8 }}>Whitepaper generated</div>
+      <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280', marginBottom: 10 }}>Visit your token page to download the PDF.</p>
     </div>
   )
 
@@ -472,19 +391,22 @@ function WhitepaperAddon({ contractAddress, draftId }: { contractAddress: string
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 8 }}>
       <div>
         <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 600, color: '#F9FAFB', marginBottom: 2 }}>
-          {step === 'pay' ? 'Confirm in MetaMask...' : step === 'generating' ? 'Generating whitepaper...' : 'Generate Whitepaper'}
+          {step === 'paying' ? 'Confirm in MetaMask...' : step === 'generating' ? 'Generating whitepaper...' : 'Generate Whitepaper'}
         </div>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>AI-written project document — builds credibility</div>
+        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>
+          {error ? <span style={{ color: '#FF6B6B' }}>{error}</span> : 'AI-written litepaper — builds credibility'}
+        </div>
       </div>
       <button
-        onClick={initiateWhitepaper}
+        onClick={payAndGenerate}
         disabled={step !== 'idle'}
-        style={{ padding: '6px 14px', background: step === 'idle' ? 'rgba(255,149,0,0.08)' : 'transparent', border: `1px solid ${step === 'idle' ? 'rgba(255,149,0,0.3)' : '#1E1E2E'}`, borderRadius: 6, cursor: step === 'idle' ? 'pointer' : 'not-allowed', fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, fontWeight: 700, color: step === 'idle' ? '#FF9500' : '#4B5563' }}>
+        style={{ padding: '6px 14px', background: step === 'idle' ? 'rgba(255,149,0,0.08)' : 'transparent', border: `1px solid ${step === 'idle' ? 'rgba(255,149,0,0.3)' : '#1E1E2E'}`, borderRadius: 6, cursor: step === 'idle' ? 'pointer' : 'not-allowed', fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, fontWeight: 700, color: step === 'idle' ? '#FF9500' : '#4B5563', flexShrink: 0 }}>
         {step === 'idle' ? '$15' : '...'}
       </button>
     </div>
   )
 }
+
 
 // ── Post-deploy modal ─────────────────────────────────────────────────────────
 function PostDeployModal({ result, draft, chain, draftId, onDismiss }: {
