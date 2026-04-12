@@ -1,11 +1,10 @@
 // apps/web/src/components/ui/Navbar.tsx
-
 'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { MultiWalletButton } from './MultiWalletButton'
 
 const links = [
   { href: '/dashboard',        label: 'Feed'      },
@@ -52,10 +51,10 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Right */}
+          {/* Right — multi wallet */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div className="nav-wallet">
-              <ConnectButton showBalance={false} accountStatus="avatar" chainStatus="icon" />
+              <MultiWalletButton />
             </div>
             <button className="mobile-menu-btn" onClick={() => setOpen(o => !o)} aria-label="Menu">
               {open ? (
@@ -82,9 +81,13 @@ export function Navbar() {
           padding: '20px 16px 40px',
           overflowY: 'auto',
         }}>
-          <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-            <ConnectButton showBalance={false} accountStatus="full" chainStatus="icon" />
+          {/* Wallet section */}
+          <div style={{ marginBottom: 24, padding: '16px', background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 12 }}>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', letterSpacing: '0.1em', marginBottom: 12 }}>CONNECTED WALLETS</div>
+            <MultiWalletButton />
           </div>
+
+          {/* Nav links */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {links.map(l => (
               <Link key={l.href} href={l.href}
