@@ -295,6 +295,13 @@ export default function TokenPage() {
             Boost Token
           </button>
         )}
+        <button onClick={() => router.push(`/dashboard/tokens/${params.id}/whitepaper`)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(255,149,0,0.06)', border: '1px solid rgba(255,149,0,0.2)', borderRadius: 7, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#FF9500' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            <path d="M14 2v6h6M16 13H8M16 17H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          Whitepaper
+        </button>
         <a href={explorerUrl} target="_blank" rel="noreferrer"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'transparent', border: '1px solid #1E1E2E', borderRadius: 7, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', textDecoration: 'none' }}>
           View on Explorer
