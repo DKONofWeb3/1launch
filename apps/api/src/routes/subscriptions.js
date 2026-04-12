@@ -63,7 +63,7 @@ subscriptionsRouter.post('/initiate', async (req, res) => {
 
     // Inline plan definitions — source of truth for pricing
     const INLINE_PLANS = {
-      'deploy_fee_bsc': { id: 'deploy_fee_bsc', name: 'BSC Deploy Fee', price_usd: 2  },
+      'deploy_fee_bsc': { id: 'deploy_fee_bsc', name: 'BSC Deploy Fee', price_usd: 5  },
       'deploy_fee_sol': { id: 'deploy_fee_sol', name: 'SOL Deploy Fee',  price_usd: 1  },
       'volbot_starter': { id: 'volbot_starter',  name: 'Volume Bot Starter', price_usd: 19  },
       'volbot_growth':  { id: 'volbot_growth',   name: 'Volume Bot Growth',  price_usd: 49  },
