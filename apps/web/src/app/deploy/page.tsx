@@ -150,28 +150,59 @@ function useBSCDeploy() {
 
     const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 2 })
 
-    // ── Correct event parsing using viem ──────────────────────────────────────
+    // ── Parse token address from factory event ───────────────────────────────
     let tokenAddress = ''
+
+    // Method 1: viem parseEventLogs
     try {
-      const logs = parseEventLogs({
+      const parsed = parseEventLogs({
         abi: FACTORY_ABI,
         eventName: 'TokenCreated',
         logs: receipt.logs,
       })
-      if (logs.length > 0) {
-        tokenAddress = (logs[0].args as any).token as string
+      if (parsed.length > 0) {
+        tokenAddress = (parsed[0].args as any).token as string
+        console.log('[Deploy] Got address from parseEventLogs:', tokenAddress)
       }
     } catch (e) {
-      console.warn('[Deploy] Event parse failed, trying manual:', e)
-      // Fallback — token address is in topics[1], strip padding
+      console.warn('[Deploy] parseEventLogs failed:', e)
+    }
+
+    // Method 2: find log emitted BY the factory, read topics[1]
+    if (!tokenAddress) {
+      const factoryLog = receipt.logs.find(
+        (log: any) => log.address?.toLowerCase() === factoryAddress.toLowerCase()
+      )
+      if (factoryLog && factoryLog.topics[1]) {
+        tokenAddress = '0x' + factoryLog.topics[1].slice(26)
+        console.log('[Deploy] Got address from factory log topics:', tokenAddress)
+      }
+    }
+
+    // Method 3: look for the created contract in receipt
+    if (!tokenAddress && (receipt as any).contractAddress) {
+      tokenAddress = (receipt as any).contractAddress
+      console.log('[Deploy] Got address from receipt.contractAddress:', tokenAddress)
+    }
+
+    // Method 4: last resort — scan all logs for any 42-char address in topics
+    if (!tokenAddress) {
       for (const log of receipt.logs) {
-        if (log.topics.length >= 2) {
-          const raw = log.topics[1]
-          if (raw) {
-            tokenAddress = '0x' + raw.slice(26)
-            break
+        for (const topic of log.topics.slice(1)) {
+          if (topic && topic.length === 66) {
+            const candidate = '0x' + topic.slice(26)
+            // Skip the factory and user wallet
+            if (
+              candidate.toLowerCase() !== factoryAddress.toLowerCase() &&
+              candidate.toLowerCase() !== address!.toLowerCase()
+            ) {
+              tokenAddress = candidate
+              console.log('[Deploy] Got address from topic scan:', tokenAddress)
+              break
+            }
           }
         }
+        if (tokenAddress) break
       }
     }
 
