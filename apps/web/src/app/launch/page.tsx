@@ -293,7 +293,7 @@ function EditScreen({ draft, narrative, chain, onUpdate, onSaveDraft, onRegenera
             fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, fontWeight: 700,
             color: chain === 'bsc' ? '#F3BA2F' : '#9945FF',
           }}>
-            {chain.toUpperCase()} — {chain === 'bsc' ? '$15' : '$6'}
+            {chain.toUpperCase()} — {chain === 'bsc' ? '$5' : '$1'}
           </span>
         </div>
         <button onClick={onRegenerate} disabled={regenerating} style={{
