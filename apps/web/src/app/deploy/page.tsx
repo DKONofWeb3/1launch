@@ -380,6 +380,81 @@ function BoostModal({ contractAddress, chain, draftId, onClose }: {
   )
 }
 
+// ── Whitepaper add-on ────────────────────────────────────────────────────────
+function WhitepaperAddon({ contractAddress, draftId }: { contractAddress: string; draftId: string }) {
+  const [step,    setStep]    = useState<'idle' | 'pay' | 'generating' | 'done'>('idle')
+  const [payData, setPayData] = useState<any>(null)
+  const [doc,     setDoc]     = useState<string | null>(null)
+  const [copied,  setCopied]  = useState(false)
+  const { address }                        = useAccount()
+  const { sendTransactionAsync: sendBNB }  = useSendTransaction()
+
+  async function initiateWhitepaper() {
+    setStep('pay')
+    try {
+      // Create payment
+      const initRes = await api.post('/api/subscriptions/initiate', {
+        plan_id: 'whitepaper', chain: 'bsc', token: 'BNB', wallet: address || 'user',
+      })
+      if (!initRes.data.success) throw new Error(initRes.data.error)
+      const paymentId = initRes.data.data.id
+
+      // Get BNB price
+      const bnbPrice = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd')
+        .then(r => r.json()).then(d => d.binancecoin.usd).catch(() => 603)
+      const bnbAmount = (15 / bnbPrice).toFixed(6)
+      const platformWallet = process.env.NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS as `0x${string}`
+
+      // Send BNB via MetaMask
+      const txHash = await sendBNB({ to: platformWallet, value: parseEther(bnbAmount) })
+      if (!txHash) throw new Error('Transaction cancelled')
+
+      // Verify
+      await api.post('/api/payments/verify-tx', { tx_hash: txHash, chain: 'bsc', payment_id: paymentId })
+
+      // Generate whitepaper
+      setStep('generating')
+      const res = await api.post('/api/whitepaper/generate', { draft_id: draftId, contract_address: contractAddress })
+      if (res.data.success) {
+        setDoc(res.data.data.content)
+        setStep('done')
+      } else {
+        throw new Error(res.data.error)
+      }
+    } catch (err: any) {
+      console.error('[Whitepaper]', err.message)
+      setStep('idle')
+    }
+  }
+
+  if (step === 'done' && doc) return (
+    <div style={{ padding: '12px 14px', background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 8 }}>
+      <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#00FF88', marginBottom: 6 }}>Whitepaper generated</div>
+      <button onClick={() => { navigator.clipboard.writeText(doc); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+        style={{ padding: '6px 14px', background: 'transparent', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 6, cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#00FF88' }}>
+        {copied ? 'Copied' : 'Copy Whitepaper'}
+      </button>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 8 }}>
+      <div>
+        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 600, color: '#F9FAFB', marginBottom: 2 }}>
+          {step === 'pay' ? 'Confirm in MetaMask...' : step === 'generating' ? 'Generating whitepaper...' : 'Generate Whitepaper'}
+        </div>
+        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>AI-written project document — builds credibility</div>
+      </div>
+      <button
+        onClick={initiateWhitepaper}
+        disabled={step !== 'idle'}
+        style={{ padding: '6px 14px', background: step === 'idle' ? 'rgba(255,149,0,0.08)' : 'transparent', border: `1px solid ${step === 'idle' ? 'rgba(255,149,0,0.3)' : '#1E1E2E'}`, borderRadius: 6, cursor: step === 'idle' ? 'pointer' : 'not-allowed', fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, fontWeight: 700, color: step === 'idle' ? '#FF9500' : '#4B5563' }}>
+        {step === 'idle' ? '$15' : '...'}
+      </button>
+    </div>
+  )
+}
+
 // ── Post-deploy modal ─────────────────────────────────────────────────────────
 function PostDeployModal({ result, draft, chain, draftId, onDismiss }: {
   result: DeployResult; draft: any; chain: string; draftId: string; onDismiss: () => void
@@ -479,6 +554,9 @@ function PostDeployModal({ result, draft, chain, draftId, onDismiss }: {
                 </div>
                 <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#00FF88', fontWeight: 700 }}>free</span>
               </button>
+
+              {/* Whitepaper — paid add-on */}
+              <WhitepaperAddon contractAddress={result.contractAddress} draftId={draftId} />
             </div>
           </div>
 
@@ -611,10 +689,10 @@ function DeployPageContent() {
     setPayingNow(true)
     setPayError(null)
     try {
-      // Get SOL amount for $6
+      // Get SOL amount for $1
       const solPrice = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd')
         .then(r => r.json()).then(d => d.solana.usd).catch(() => 81)
-      const solAmount  = parseFloat((6 / solPrice).toFixed(6))
+      const solAmount  = parseFloat((1 / solPrice).toFixed(6))
       const toAddress  = process.env.NEXT_PUBLIC_SOLANA_PLATFORM_WALLET || ''
 
       if (!toAddress) throw new Error('Platform wallet not configured')
@@ -737,7 +815,7 @@ function DeployPageContent() {
           {!paymentPaid && isSolana && (
             <div style={{ background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 12, padding: '18px 20px' }}>
               <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280', letterSpacing: '0.12em', marginBottom: 12 }}>STEP 1 — PAY DEPLOY FEE</div>
-              <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 900, color: '#F9FAFB', marginBottom: 14 }}>$6 in SOL</div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 900, color: '#F9FAFB', marginBottom: 14 }}>$1 in SOL</div>
               {payError && (
                 <div style={{ padding: '8px 12px', background: 'rgba(255,59,59,0.08)', border: '1px solid rgba(255,59,59,0.2)', borderRadius: 6, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#FF6B6B', marginBottom: 10 }}>
                   {payError}
@@ -759,7 +837,7 @@ function DeployPageContent() {
                     cursor: payingNow ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {payingNow ? 'Confirm in wallet...' : 'Pay $6 in SOL'}
+                  {payingNow ? 'Confirm in wallet...' : 'Pay $1 in SOL'}
                 </button>
               )}
               <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#374151', marginTop: 8 }}>

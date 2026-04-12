@@ -61,20 +61,26 @@ subscriptionsRouter.post('/initiate', async (req, res) => {
       return res.status(400).json({ success: false, error: 'plan_id, chain, token, wallet required' })
     }
 
-    let plan = PLANS[plan_id]
+    // Inline plan definitions — source of truth for pricing
+    const INLINE_PLANS = {
+      'deploy_fee_bsc': { id: 'deploy_fee_bsc', name: 'BSC Deploy Fee', price_usd: 2  },
+      'deploy_fee_sol': { id: 'deploy_fee_sol', name: 'SOL Deploy Fee',  price_usd: 1  },
+      'volbot_starter': { id: 'volbot_starter',  name: 'Volume Bot Starter', price_usd: 19  },
+      'volbot_growth':  { id: 'volbot_growth',   name: 'Volume Bot Growth',  price_usd: 49  },
+      'volbot_pro':     { id: 'volbot_pro',      name: 'Volume Bot Pro',     price_usd: 99  },
+      'audit_scan':     { id: 'audit_scan',      name: 'Audit Scan',         price_usd: 4   },
+      'whitepaper':     { id: 'whitepaper',      name: 'Whitepaper',         price_usd: 15  },
+    }
+
+    let plan = INLINE_PLANS[plan_id] || PLANS[plan_id]
+
+    // Generic deploy_fee — pick by chain
     if (!plan && plan_id === 'deploy_fee') {
-      plan = chain === 'solana' ? PLANS['deploy_fee_sol'] : PLANS['deploy_fee_bsc']
+      plan = chain === 'solana' ? INLINE_PLANS['deploy_fee_sol'] : INLINE_PLANS['deploy_fee_bsc']
     }
-    // Support volbot plans
-    if (!plan && plan_id.startsWith('volbot_')) {
-      const tier = plan_id.replace('volbot_', '')
-      const prices = { starter: 29, growth: 79, pro: 149 }
-      if (prices[tier]) {
-        plan = { id: plan_id, name: `Volume Bot ${tier}`, price_usd: prices[tier] }
-      }
-    }
+
     if (!plan || plan.price_usd === 0) {
-      return res.status(400).json({ success: false, error: 'Invalid plan' })
+      return res.status(400).json({ success: false, error: 'Invalid plan: ' + plan_id })
     }
 
     const platformWallet = chain === 'solana'
