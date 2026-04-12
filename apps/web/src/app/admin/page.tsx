@@ -178,7 +178,7 @@ export default function AdminPage() {
                   { label: 'BSC Launches ($2)', value: fmt((overview.bsc_tokens||0)*2),       color: '#F3BA2F' },
                   { label: 'SOL Launches ($1)', value: fmt((overview.sol_tokens||0)*1),        color: '#9945FF' },
                   { label: 'Volume Bots',        value: fmt(overview.volbot_revenue    || 0),  color: '#8B5CF6' },
-                  { label: 'Audit Scans ($4)',   value: fmt(overview.audit_revenue     || 0),  color: '#3B82F6' },
+
                   { label: 'Whitepapers ($15)',  value: fmt(overview.whitepaper_revenue|| 0),  color: '#FF9500' },
                 ].map(r => (
                   <div key={r.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #0A0A0F' }}>

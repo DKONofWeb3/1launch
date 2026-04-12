@@ -68,7 +68,7 @@ subscriptionsRouter.post('/initiate', async (req, res) => {
       'volbot_starter': { id: 'volbot_starter',  name: 'Volume Bot Starter', price_usd: 19  },
       'volbot_growth':  { id: 'volbot_growth',   name: 'Volume Bot Growth',  price_usd: 49  },
       'volbot_pro':     { id: 'volbot_pro',      name: 'Volume Bot Pro',     price_usd: 99  },
-      'audit_scan':     { id: 'audit_scan',      name: 'Audit Scan',         price_usd: 4   },
+      // audit_scan is FREE — no payment needed
       'whitepaper':     { id: 'whitepaper',      name: 'Whitepaper',         price_usd: 15  },
     }
 
