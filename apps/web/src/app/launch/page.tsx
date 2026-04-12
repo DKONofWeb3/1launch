@@ -146,7 +146,7 @@ function ConfirmOverlay({ narrative, chain, onChainChange, onConfirm, onBack }: 
                   : '#4B5563',
                 transition: 'all 0.15s',
               }}>
-                {c === 'bsc' ? 'BSC  —  $15' : 'Solana  —  $6'}
+                {c === 'bsc' ? 'BSC  —  $5' : 'Solana  —  $1'}
               </button>
             ))}
           </div>
