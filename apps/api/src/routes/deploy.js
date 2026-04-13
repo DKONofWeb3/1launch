@@ -1,15 +1,28 @@
 // apps/api/src/routes/deploy.js
+//
+// Fix applied: contract_address for Solana tokens is stored as-is (correct base58 casing).
+// BSC addresses are still lowercased (they're case-insensitive on EVM).
 
 const { Router } = require('express')
 const { supabase } = require('../lib/supabase')
 
 const deployRouter = Router()
 
+// ── Helper: normalise address for storage ────────────────────────────────────
+// BSC/EVM addresses are case-insensitive → store lowercase for consistent lookup.
+// Solana addresses are base58 and case-SENSITIVE → store as-is.
+
+function normaliseAddress(address, chain) {
+  if (!address) return address
+  if (chain === 'solana') return address          // preserve exact casing
+  return address.toLowerCase()                    // bsc / evm
+}
+
 // GET /api/deploy/config/:chain
 deployRouter.get('/config/:chain', async (req, res) => {
   try {
-    const { chain } = req.params
-    const network = req.query.network || 'mainnet'
+    const { chain }  = req.params
+    const network    = req.query.network || 'mainnet'
 
     if (chain === 'bsc') {
       const { getChainConfig } = require('../services/deployer/bscDeployer')
@@ -47,7 +60,7 @@ deployRouter.get('/config/:chain', async (req, res) => {
 })
 
 // POST /api/deploy/record
-// Called by frontend AFTER successful on-chain deploy
+// Called by frontend AFTER successful on-chain deploy (BSC client-side flow)
 deployRouter.post('/record', async (req, res) => {
   try {
     const {
@@ -63,7 +76,7 @@ deployRouter.post('/record', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Missing required fields' })
     }
 
-    // Find or create user — no .catch() chaining
+    // Find or create user
     const userResult = await supabase
       .from('users')
       .select('id')
@@ -85,7 +98,7 @@ deployRouter.post('/record', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Failed to resolve user' })
     }
 
-    // Update draft status to live
+    // Update draft status
     if (draft_id) {
       await supabase
         .from('token_drafts')
@@ -93,13 +106,13 @@ deployRouter.post('/record', async (req, res) => {
         .eq('id', draft_id)
     }
 
-    // Record the launched token
+    // Record launched token — preserve Solana address casing
     const launchResult = await supabase
       .from('launched_tokens')
       .insert({
         user_id:          userId,
         draft_id:         draft_id || null,
-        contract_address: contract_address.toLowerCase(),
+        contract_address: normaliseAddress(contract_address, chain),  // ← fixed
         chain,
         tx_hash,
         launched_at:      new Date().toISOString(),
@@ -109,7 +122,7 @@ deployRouter.post('/record', async (req, res) => {
 
     if (launchResult.error) throw launchResult.error
 
-    // Update narrative tokens_launched count
+    // Increment narrative launch count
     if (draft_id) {
       const draftResult = await supabase
         .from('token_drafts')
@@ -132,7 +145,7 @@ deployRouter.post('/record', async (req, res) => {
 })
 
 // POST /api/deploy/server-side
-// Platform wallet deploys on behalf of user (used when no factory contract yet)
+// Platform wallet deploys on behalf of user
 deployRouter.post('/server-side', async (req, res) => {
   try {
     const { draft_id, chain = 'bsc', network = 'mainnet', wallet_address } = req.body
@@ -141,7 +154,7 @@ deployRouter.post('/server-side', async (req, res) => {
       return res.status(400).json({ success: false, error: 'draft_id required' })
     }
 
-    // Fetch the draft
+    // Fetch draft
     const draftResult = await supabase
       .from('token_drafts')
       .select('*')
@@ -180,6 +193,9 @@ deployRouter.post('/server-side', async (req, res) => {
         decimals:     9,
         ownerAddress: wallet_address || process.env.SOLANA_PLATFORM_WALLET_ADDRESS,
         network,
+        // Pass metadata fields so Solscan shows real token info
+        description:  draft.lore || draft.description || '',
+        logoUrl:      draft.logo_url || '',
       })
     } else {
       return res.status(400).json({ success: false, error: 'Unsupported chain' })
@@ -212,13 +228,13 @@ deployRouter.post('/server-side', async (req, res) => {
       .update({ status: 'live' })
       .eq('id', draft_id)
 
-    // Save launched token
+    // Save launched token — PRESERVE Solana address casing
     const launchResult = await supabase
       .from('launched_tokens')
       .insert({
         user_id:          userId,
         draft_id,
-        contract_address: result.contractAddress.toLowerCase(),
+        contract_address: normaliseAddress(result.contractAddress, chain),  // ← fixed
         chain,
         tx_hash:          result.txHash,
         launched_at:      new Date().toISOString(),
@@ -232,14 +248,14 @@ deployRouter.post('/server-side', async (req, res) => {
       success: true,
       data: {
         ...launchResult.data,
-        explorerUrl: result.explorerUrl,
-        txUrl:       result.txUrl,
+        contract_address: result.contractAddress,  // return original casing to frontend
+        explorerUrl:      result.explorerUrl,
+        txUrl:            result.txUrl,
       },
     })
   } catch (err) {
     console.error('[POST /deploy/server-side]', err.message)
 
-    // Mark draft as failed — no .catch() chaining
     if (req.body.draft_id) {
       await supabase
         .from('token_drafts')

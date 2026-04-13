@@ -1,3 +1,8 @@
+// apps/api/src/routes/tokens.js
+//
+// Fix applied: launched tokens lookup now handles both BSC (lowercase) and
+// Solana (case-sensitive base58) wallet address storage correctly.
+
 const { Router } = require('express')
 const { supabase } = require('../lib/supabase')
 
@@ -36,40 +41,54 @@ tokenRouter.get('/draft/:id', async (req, res) => {
 })
 
 // GET /api/tokens/launched?wallet=0x...
+// wallet can be BSC (0x...) or Solana (base58) address
 tokenRouter.get('/launched', async (req, res) => {
   try {
     const { wallet } = req.query
     if (!wallet) return res.status(400).json({ success: false, error: 'wallet required' })
 
+    // Users are always stored by their BSC wallet (lowercase) since that's how
+    // wallet auth works. So always look up user by lowercased wallet.
     const { data: user } = await supabase
       .from('users')
       .select('id')
       .eq('wallet_address', wallet.toLowerCase())
-      .single()
+      .maybeSingle()
 
     if (!user) return res.json({ success: true, data: [] })
 
     const { data, error } = await supabase
       .from('launched_tokens')
-      .select('*')
+      .select(`
+        *,
+        token_drafts (
+          name,
+          ticker,
+          logo_url,
+          lore,
+          twitter_bio,
+          tg_bio,
+          first_tweets,
+          total_supply,
+          tax_buy,
+          tax_sell
+        )
+      `)
       .eq('user_id', user.id)
       .order('launched_at', { ascending: false })
 
     if (error) throw error
-    res.json({ success: true, data })
+    res.json({ success: true, data: data || [] })
   } catch (err) {
     res.status(500).json({ success: false, error: err.message })
   }
 })
 
-module.exports = { tokenRouter }
-
-// GET /api/tokens/drafts?wallet=0x... — strict wallet required
+// GET /api/tokens/drafts?wallet=0x...
 tokenRouter.get('/drafts', async (req, res) => {
   try {
     const { wallet } = req.query
 
-    // Strict: no wallet = no drafts
     if (!wallet) {
       return res.json({ success: true, data: [] })
     }
@@ -115,3 +134,35 @@ tokenRouter.post('/save-checklist', async (req, res) => {
     res.status(500).json({ success: false, error: err.message })
   }
 })
+
+// PATCH /api/tokens/fix-address
+// One-time fix endpoint to correct a stored lowercase Solana address.
+// Usage: PATCH /api/tokens/fix-address
+// Body: { contract_address_wrong: "dmq...", contract_address_correct: "DmqQ..." }
+tokenRouter.patch('/fix-address', async (req, res) => {
+  try {
+    const { contract_address_wrong, contract_address_correct } = req.body
+
+    if (!contract_address_wrong || !contract_address_correct) {
+      return res.status(400).json({ success: false, error: 'Both addresses required' })
+    }
+
+    const { data, error } = await supabase
+      .from('launched_tokens')
+      .update({ contract_address: contract_address_correct })
+      .eq('contract_address', contract_address_wrong)
+      .select()
+
+    if (error) throw error
+
+    res.json({
+      success: true,
+      message: `Updated ${data?.length || 0} row(s)`,
+      data,
+    })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+module.exports = { tokenRouter }
