@@ -13,6 +13,7 @@ import { api } from '@/lib/api'
 import { TokenLogo } from '@/components/launch/TokenLogo'
 import { IconRocket } from '@/components/ui/Icons'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { useWalletContext } from '@/context/WalletContext'
 
 type DeployStatus = 'idle' | 'waiting_wallet' | 'pending' | 'confirming' | 'success' | 'error'
 
@@ -560,9 +561,16 @@ function DeployPageContent() {
 
   const { deploy: deployBSC, address: bscAddress } = useBSCDeploy()
   const { paySOL, publicKey: solPublicKey }          = useSolanaPayment()
-  const { sendTransaction: sendBNB }                  = useSendTransaction()
+  const { sendTransactionAsync: sendBNB }             = useSendTransaction()
   const [payingNow,  setPayingNow]  = useState(false)
   const [payError,   setPayError]   = useState<string | null>(null)
+
+  // Unified wallet — either EVM or Solana
+  const { evmAddress, solAddress: ctxSolAddress, isConnected } = useWalletContext()
+  // For Solana payment: use wallet adapter's publicKey directly
+  const activeSolAddress = solPublicKey?.toBase58() || ctxSolAddress
+  // Wallet address to record against payment
+  const activeWallet = evmAddress || activeSolAddress || 'user'
 
   useEffect(() => {
     const tg     = (window as any).Telegram?.WebApp
@@ -653,7 +661,7 @@ function DeployPageContent() {
       // Creates payment record first
       const initRes = await api.post('/api/subscriptions/initiate', {
         plan_id: 'deploy_fee', chain: 'solana', token: 'SOL',
-        wallet: solPublicKey?.toBase58() || 'tg_user',
+        wallet: activeSolAddress || 'tg_user',
       })
       if (!initRes.data.success) throw new Error(initRes.data.error)
       const paymentId = initRes.data.data.id
@@ -774,9 +782,11 @@ function DeployPageContent() {
                   {payError}
                 </div>
               )}
-              {!solPublicKey ? (
-                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#6B7280', textAlign: 'center', padding: '12px 0' }}>
-                  Connect your Solana wallet (Phantom / Solflare) to pay
+              {!activeSolAddress ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#FF9500', padding: '10px 14px', background: 'rgba(255,149,0,0.06)', border: '1px solid rgba(255,149,0,0.2)', borderRadius: 8 }}>
+                    No Solana wallet connected. Add one via the wallet button in the navbar.
+                  </div>
                 </div>
               ) : (
                 <button
@@ -784,8 +794,8 @@ function DeployPageContent() {
                   disabled={payingNow}
                   style={{
                     width: '100%', padding: '13px',
-                    background: payingNow ? '#1E1E2E' : '#00FF88',
-                    color: '#0A0A0F', border: 'none', borderRadius: 8,
+                    background: payingNow ? '#1E1E2E' : '#9945FF',
+                    color: '#F9FAFB', border: 'none', borderRadius: 8,
                     fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700,
                     cursor: payingNow ? 'not-allowed' : 'pointer',
                   }}
