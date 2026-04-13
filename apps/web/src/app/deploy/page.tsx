@@ -59,11 +59,13 @@ const FACTORY_ABI = [
 
 // ── Solana direct payment hook ───────────────────────────────────────────────
 function useSolanaPayment() {
-  const { publicKey, sendTransaction } = useWallet()
-  const { connection }                 = useConnection()
+  const { publicKey, sendTransaction, connected, wallet } = useWallet()
+  const { connection }                                     = useConnection()
 
   async function paySOL(amountSOL: number, toAddress: string): Promise<string> {
-    if (!publicKey) throw new Error('Solana wallet not connected')
+    if (!publicKey)  throw new Error('Solana wallet not connected')
+    if (!connected)  throw new Error('Wallet not connected. Please connect Phantom or Solflare.')
+    if (!wallet)     throw new Error('No Solana wallet found. Install Phantom or Solflare.')
 
     const toPubkey    = new PublicKey(toAddress)
     const lamports    = Math.round(amountSOL * LAMPORTS_PER_SOL)

@@ -33,7 +33,11 @@ const wagmiConfig = getDefaultConfig({
 })
 
 const queryClient = new QueryClient()
-const solanaEndpoint = process.env.NEXT_PUBLIC_HELIUS_RPC || clusterApiUrl('mainnet-beta')
+// api.mainnet-beta.solana.com blocks browser requests (403)
+// Use Ankr as the free fallback — CORS-friendly, no key needed
+const solanaEndpoint =
+  process.env.NEXT_PUBLIC_HELIUS_RPC ||
+  'https://rpc.ankr.com/solana'
 
 // Cast to any — fixes React 18/19 type mismatch with @solana/wallet-adapter-react
 const SolConnection = ConnectionProvider  as any
