@@ -78,7 +78,7 @@ export function WalletGuard({ children }: { children: React.ReactNode }) {
             background: 'rgba(243,186,47,0.1)', border: '1px solid rgba(243,186,47,0.2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <span style={{ fontFamily: mono, fontSize: 9, fontWeight: 900, color: '#F3BA2F' }}>BSC</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 7H9.5L12 2Z" fill="#F3BA2F"/><path d="M7 5.5L9.5 7L7 9.5L4.5 7L7 5.5Z" fill="#F3BA2F"/><path d="M17 5.5L19.5 7L17 9.5L14.5 7L17 5.5Z" fill="#F3BA2F"/><path d="M12 7L17 9.5L19.5 12L17 14.5L12 17L7 14.5L4.5 12L7 9.5L12 7Z" fill="#F3BA2F"/><path d="M7 14.5L9.5 17L7 19.5L4.5 17L7 14.5Z" fill="#F3BA2F"/><path d="M17 14.5L19.5 17L17 19.5L14.5 17L17 14.5Z" fill="#F3BA2F"/><path d="M12 17L14.5 19L12 22L9.5 19L12 17Z" fill="#F3BA2F"/></svg>
           </div>
           <div>
             <div style={{ fontFamily: mono, fontSize: 13, fontWeight: 700, color: '#F9FAFB', marginBottom: 2 }}>
@@ -108,7 +108,7 @@ export function WalletGuard({ children }: { children: React.ReactNode }) {
             background: 'rgba(153,69,255,0.1)', border: '1px solid rgba(153,69,255,0.2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <span style={{ fontFamily: mono, fontSize: 9, fontWeight: 900, color: '#9945FF' }}>SOL</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 17.5H20L17 20H4V17.5Z" fill="url(#wg_sol1)"/><path d="M4 10.75H20L17 13.25H4V10.75Z" fill="url(#wg_sol2)"/><path d="M4 4H20L17 6.5H4V4Z" fill="url(#wg_sol3)"/><defs><linearGradient id="wg_sol1" x1="4" y1="18.75" x2="20" y2="18.75"><stop stopColor="#9945FF"/><stop offset="1" stopColor="#14F195"/></linearGradient><linearGradient id="wg_sol2" x1="4" y1="12" x2="20" y2="12"><stop stopColor="#9945FF"/><stop offset="1" stopColor="#14F195"/></linearGradient><linearGradient id="wg_sol3" x1="4" y1="5.25" x2="20" y2="5.25"><stop stopColor="#9945FF"/><stop offset="1" stopColor="#14F195"/></linearGradient></defs></svg>
           </div>
           <div>
             <div style={{ fontFamily: mono, fontSize: 13, fontWeight: 700, color: '#F9FAFB', marginBottom: 2 }}>

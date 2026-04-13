@@ -13,6 +13,9 @@ import { api } from '@/lib/api'
 import { TokenLogo } from '@/components/launch/TokenLogo'
 import { IconRocket } from '@/components/ui/Icons'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { MultiWalletButton } from '@/components/ui/MultiWalletButton'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
+import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { useWalletContext } from '@/context/WalletContext'
 
 type DeployStatus = 'idle' | 'waiting_wallet' | 'pending' | 'confirming' | 'success' | 'error'
@@ -567,6 +570,8 @@ function DeployPageContent() {
 
   // Unified wallet — either EVM or Solana
   const { evmAddress, solAddress: ctxSolAddress, isConnected } = useWalletContext()
+  const { openConnectModal }         = useConnectModal()
+  const { setVisible: openSolModal } = useWalletModal()
   // For Solana payment: use wallet adapter's publicKey directly
   const activeSolAddress = solPublicKey?.toBase58() || ctxSolAddress
   // Wallet address to record against payment
@@ -605,7 +610,7 @@ function DeployPageContent() {
   }, [paymentData?.id, paymentPaid])
 
   async function handleDeploy() {
-    if (isTelegram && !bscAddress) { setTgWalletGate(true); return }
+    if (isTelegram && !bscAddress && !activeSolAddress) { setTgWalletGate(true); return }
     setError(null)
     setStatus('waiting_wallet')
     try {
@@ -690,20 +695,52 @@ function DeployPageContent() {
 
   if (tgWalletGate) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: '24px 20px', textAlign: 'center' }}>
-      <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 900, color: '#F9FAFB', marginBottom: 10 }}>Connect Wallet to Receive Tokens</h2>
-      <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', marginBottom: 24, maxWidth: 300, lineHeight: 1.7 }}>
-        Open this page in MetaMask or Phantom browser to connect your wallet and receive 100% of the token supply.
+      <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 900, color: '#F9FAFB', marginBottom: 8 }}>Connect a Wallet</h2>
+      <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: '#6B7280', marginBottom: 28, maxWidth: 300, lineHeight: 1.7 }}>
+        Connect to receive 100% of the token supply to your wallet.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 300 }}>
-        <a href={`https://metamask.app.link/dapp/${typeof window !== 'undefined' ? window.location.host + window.location.pathname + window.location.search : ''}`}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '13px 20px', background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 10, fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700, color: '#F9FAFB', textDecoration: 'none' }}>
-          Open in MetaMask
-        </a>
-        <a href={`https://phantom.app/ul/browse/${typeof window !== 'undefined' ? window.location.host + window.location.pathname + window.location.search : ''}`}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '13px 20px', background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 10, fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700, color: '#F9FAFB', textDecoration: 'none' }}>
-          Open in Phantom
-        </a>
-        <ConnectButton showBalance={false} accountStatus="avatar" chainStatus="icon" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 340 }}>
+        <button onClick={() => openConnectModal?.()} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: '#0E0E16', border: '1px solid rgba(243,186,47,0.3)', borderRadius: 10, cursor: 'pointer', textAlign: 'left' as const, width: '100%' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(243,186,47,0.1)', border: '1px solid rgba(243,186,47,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 2L14.5 7H9.5L12 2Z" fill="#F3BA2F"/>
+  <path d="M7 5.5L9.5 7L7 9.5L4.5 7L7 5.5Z" fill="#F3BA2F"/>
+  <path d="M17 5.5L19.5 7L17 9.5L14.5 7L17 5.5Z" fill="#F3BA2F"/>
+  <path d="M12 7L17 9.5L19.5 12L17 14.5L12 17L7 14.5L4.5 12L7 9.5L12 7Z" fill="#F3BA2F"/>
+  <path d="M7 14.5L9.5 17L7 19.5L4.5 17L7 14.5Z" fill="#F3BA2F"/>
+  <path d="M17 14.5L19.5 17L17 19.5L14.5 17L17 14.5Z" fill="#F3BA2F"/>
+  <path d="M12 17L14.5 19L12 22L9.5 19L12 17Z" fill="#F3BA2F"/>
+</svg>
+          </div>
+          <div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700, color: '#F9FAFB', marginBottom: 2 }}>BSC Wallet</div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>MetaMask · WalletConnect · Coinbase</div>
+          </div>
+        </button>
+        <button onClick={() => openSolModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: '#0E0E16', border: '1px solid rgba(153,69,255,0.3)', borderRadius: 10, cursor: 'pointer', textAlign: 'left' as const, width: '100%' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(153,69,255,0.1)', border: '1px solid rgba(153,69,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M4 17.5H20L17 20H4L4 17.5Z" fill="url(#sol1)"/>
+  <path d="M4 10.75H20L17 13.25H4L4 10.75Z" fill="url(#sol2)"/>
+  <path d="M4 4H20L17 6.5H4L4 4Z" fill="url(#sol3)"/>
+  <defs>
+    <linearGradient id="sol1" x1="4" y1="18.75" x2="20" y2="18.75" gradientUnits="userSpaceOnUse">
+      <stop stopColor="#9945FF"/><stop offset="1" stopColor="#14F195"/>
+    </linearGradient>
+    <linearGradient id="sol2" x1="4" y1="12" x2="20" y2="12" gradientUnits="userSpaceOnUse">
+      <stop stopColor="#9945FF"/><stop offset="1" stopColor="#14F195"/>
+    </linearGradient>
+    <linearGradient id="sol3" x1="4" y1="5.25" x2="20" y2="5.25" gradientUnits="userSpaceOnUse">
+      <stop stopColor="#9945FF"/><stop offset="1" stopColor="#14F195"/>
+    </linearGradient>
+  </defs>
+</svg>
+          </div>
+          <div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 700, color: '#F9FAFB', marginBottom: 2 }}>Solana Wallet</div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563' }}>Phantom · Solflare · Backpack · any</div>
+          </div>
+        </button>
       </div>
       <button onClick={() => setTgWalletGate(false)} style={{ marginTop: 20, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#374151' }}>
         Cancel
@@ -849,7 +886,7 @@ export default function DeployPage() {
         <div style={{ width: 120 }} />
         <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 800, color: '#F9FAFB' }}>1launch</span>
         <div style={{ width: 120, display: 'flex', justifyContent: 'flex-end' }}>
-          <ConnectButton showBalance={false} accountStatus="avatar" chainStatus="icon" />
+          <MultiWalletButton />
         </div>
       </div>
       <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}><span style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#6B7280', fontSize: 12 }}>Loading...</span></div>}>
