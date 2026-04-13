@@ -637,7 +637,23 @@ function DeployPageContent() {
         setStatus('waiting_wallet')
         deployResult = await deployBSC(draft, config.factoryAddress)
       } else {
-        throw new Error('Solana deploy coming soon — use BSC for now')
+        // Solana server-side deploy
+        setStatus('pending')
+        const res = await api.post('/api/deploy/server-side', {
+          draft_id:   draftId,
+          chain:      'solana',
+          network:    'mainnet',
+          owner:      activeSolAddress || '',
+        })
+        if (!res.data.success) throw new Error(res.data.error)
+        setStatus('success')
+        setResult({
+          contractAddress: res.data.data.contract_address,
+          txHash:          res.data.data.tx_hash,
+          explorerUrl:     `https://solscan.io/token/${res.data.data.contract_address}`,
+          txUrl:           `https://solscan.io/tx/${res.data.data.tx_hash}`,
+        })
+        return
       }
 
       setStatus('confirming')
