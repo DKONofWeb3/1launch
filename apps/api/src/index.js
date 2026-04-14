@@ -21,6 +21,8 @@ app.use(cors({
       process.env.WEB_URL,
       'http://localhost:3000',
       'https://1launch-web.vercel.app',
+      'https://1launchos.xyz',
+      'https://www.1launchos.xyz',
     ].filter(Boolean)
     if (!origin || allowed.includes(origin)) return callback(null, true)
     callback(new Error('Not allowed by CORS'))
