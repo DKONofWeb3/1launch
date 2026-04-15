@@ -1,64 +1,58 @@
 // apps/api/src/middleware/regenLimit.js
 //
-// Limits how many times a user can regenerate token details for a draft.
-// Free tier: max 2 regens per draft (initial generation doesn't count).
-// When paid tiers launch, pass plan through and remove the cap for pro/agency.
+// Limits token regeneration to 2 times per draft for free users.
+// Pro/Builder/Agency: unlimited.
 
 const { supabase } = require('../lib/supabase')
 
-const REGEN_LIMIT = {
-  free:    2,
-  builder: 2,
-  pro:     Infinity,
-  agency:  Infinity,
-}
+const REGEN_LIMIT_FREE = 2
 
 async function checkRegenLimit(req, res, next) {
   try {
-    const { draft_id, wallet_address } = req.body
+    const { draft_id } = req.body
 
-    // If no draft_id it's a fresh generation — always allowed
+    // No draft yet = first generation, always allow
     if (!draft_id) return next()
 
-    // Look up user plan
-    const { data: user } = await supabase
-      .from('users')
-      .select('id, plan')
-      .eq('wallet_address', (wallet_address || '').toLowerCase())
+    const { data: draft, error } = await supabase
+      .from('token_drafts')
+      .select('id, regen_count, user_id')
+      .eq('id', draft_id)
       .maybeSingle()
 
-    const plan  = user?.plan || 'free'
-    const limit = REGEN_LIMIT[plan] ?? 2
+    if (error || !draft) return next()
 
-    if (limit === Infinity) return next()
+    // Check plan — paid tiers get unlimited
+    if (draft.user_id) {
+      const { data: user } = await supabase
+        .from('users').select('plan').eq('id', draft.user_id).maybeSingle()
 
-    // Count existing regens for this draft
-    const { count } = await supabase
-      .from('token_regens')
-      .select('id', { count: 'exact', head: true })
-      .eq('draft_id', draft_id)
-      .eq('user_id', user?.id)
+      if (['pro', 'agency', 'builder'].includes(user?.plan)) return next()
+    }
 
-    if ((count || 0) >= limit) {
+    const currentCount = draft.regen_count || 0
+
+    if (currentCount >= REGEN_LIMIT_FREE) {
       return res.status(429).json({
-        success: false,
-        error:   `Regeneration limit reached (${limit}/${limit}). Upgrade to Pro for unlimited regenerations.`,
-        code:    'REGEN_LIMIT_REACHED',
-        limit,
-        used:    count,
+        success:     false,
+        error:       'Regeneration limit reached',
+        code:        'REGEN_LIMIT',
+        message:     `Free tier allows ${REGEN_LIMIT_FREE} regenerations per token. Upgrade to Pro for unlimited.`,
+        regen_count: currentCount,
+        regen_limit: REGEN_LIMIT_FREE,
       })
     }
 
-    // Record this regen attempt
+    // Increment and allow
     await supabase
-      .from('token_regens')
-      .insert({ draft_id, user_id: user?.id, created_at: new Date().toISOString() })
+      .from('token_drafts')
+      .update({ regen_count: currentCount + 1 })
+      .eq('id', draft_id)
 
     next()
   } catch (err) {
-    // Don't block the request if tracking fails
     console.error('[regenLimit]', err.message)
-    next()
+    next() // never block on middleware error
   }
 }
 

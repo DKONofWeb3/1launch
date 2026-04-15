@@ -58,7 +58,7 @@ require('dotenv').config({ path: 'apps/api/.env' })
 
 const { ethers } = require('ethers')
 
-const RPC = 'https://bsc-dataseed.bnbchain.org'
+const RPC         = 'https://bsc-dataseed.bnbchain.org'
 const PRIVATE_KEY = process.env.PLATFORM_WALLET_PRIVATE_KEY
 const WALLET_ADDR = process.env.PLATFORM_WALLET_ADDRESS
 
@@ -67,7 +67,8 @@ if (!PRIVATE_KEY) {
   process.exit(1)
 }
 
-const DEPLOY_FEE_WEI = '25000000000000000' // 0.025 BNB
+// $5 deploy fee — at ~$600/BNB = 0.0083 BNB
+const DEPLOY_FEE_WEI = '8300000000000000' // 0.0083 BNB ≈ $5
 
 ;(async () => {
   const provider = new ethers.JsonRpcProvider(RPC)
