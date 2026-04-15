@@ -103,7 +103,7 @@ async function attachMetadata(connection, payer, mintPublicKey, { name, symbol, 
 
 async function uploadMetadataJson(mintAddress, { name, symbol, description, imageUrl }) {
   try {
-    const { supabase } = require('../lib/supabase')
+    const { supabase } = require('../../lib/supabase')
 
     const metadataJson = JSON.stringify({
       name,

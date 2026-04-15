@@ -1,12 +1,13 @@
 const { Router } = require('express')
 const { callAI, parseAIJson } = require('../lib/ai')
 const { supabase } = require('../lib/supabase')
+const { checkRegenLimit } = require('../middleware/regenLimit')
 
 const generateRouter = Router()
 
 // POST /api/generate/token
 // Body: { narrative_id?, narrative_title, narrative_summary, chain }
-generateRouter.post('/token', async (req, res) => {
+generateRouter.post('/token', checkRegenLimit, async (req, res) => {
   try {
     const { narrative_title, narrative_summary, chain = 'bsc' } = req.body
 
