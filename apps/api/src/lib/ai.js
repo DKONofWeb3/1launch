@@ -12,7 +12,7 @@
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
 
-const MODEL_NARRATIVE = 'google/gemini-flash-1.5'
+const MODEL_NARRATIVE = 'gemini-2.0-flash-001'
 const MODEL_LAUNCH    = 'meta-llama/llama-3.1-8b-instruct'
 
 // ── Concurrency limiter ───────────────────────────────────────────────────────

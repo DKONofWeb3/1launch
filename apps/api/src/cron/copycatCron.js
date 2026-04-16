@@ -1,7 +1,7 @@
 // apps/api/src/cron/copycatCron.js
 
-const { supabase }        = require('../lib/supabase')
-const { findCopycats }    = require('../services/tokenSearchService')
+const { supabase }         = require('../lib/supabase')
+const { findCopycats }     = require('../services/tokenSearchService')
 const { sendNotification } = require('../services/telegram/telegramBot')
 
 async function runCopycatScan() {
@@ -10,7 +10,7 @@ async function runCopycatScan() {
   try {
     const { data: tokens, error } = await supabase
       .from('launched_tokens')
-      .select(`id, contract_address, chain, launched_at, user_id, token_drafts(name, ticker)`)
+      .select('id, contract_address, chain, launched_at, user_id, token_drafts(name, ticker)')
       .limit(50)
 
     if (error || !tokens?.length) return
@@ -27,20 +27,20 @@ async function runCopycatScan() {
           token.launched_at
         )
 
-        // findCopycats returns an array — guard against unexpected shapes
         if (!Array.isArray(copycats) || copycats.length === 0) continue
 
-        // Check which ones we haven't alerted about yet
-        const { data: existing } = await supabase
+        // Check which copycats we've already alerted on
+        const existingResult = await supabase
           .from('copycat_alerts')
           .select('copycat_address')
           .eq('token_id', token.id)
 
-        const alerted     = new Set((existing || []).map(r => r.copycat_address))
+        const alerted     = new Set((existingResult.data || []).map(r => r.copycat_address))
         const newCopycats = copycats.filter(c => !alerted.has(c.address))
 
         for (const copycat of newCopycats) {
-          await supabase
+          // Insert without .catch() — use proper async/await error handling
+          const insertResult = await supabase
             .from('copycat_alerts')
             .insert({
               token_id:        token.id,
@@ -54,25 +54,30 @@ async function runCopycatScan() {
               dex_url:         copycat.dex_url,
               detected_at:     new Date().toISOString(),
             })
-            .catch(() => {})
+
+          if (insertResult.error) {
+            console.warn(`[CopycatCron] Insert failed for ${copycat.ticker}:`, insertResult.error.message)
+            continue
+          }
 
           // TG alert if user has chat linked
           if (token.user_id) {
-            const { data: user } = await supabase
+            const userResult = await supabase
               .from('users')
               .select('telegram_chat_id')
               .eq('id', token.user_id)
-              .single()
-              .catch(() => ({ data: null }))
+              .maybeSingle()
 
-            if (user?.telegram_chat_id) {
+            if (userResult.data?.telegram_chat_id) {
               const msg =
                 `*Copycat Alert — $${draft.ticker}*\n\n` +
                 `New token detected: ${copycat.name} ($${copycat.ticker})\n` +
                 `Chain: ${copycat.chain}\n` +
                 `Volume 24h: $${(copycat.volume_24h || 0).toLocaleString()}\n` +
                 `View: ${copycat.dex_url}`
-              await sendNotification(user.telegram_chat_id, msg)
+              try {
+                await sendNotification(userResult.data.telegram_chat_id, msg)
+              } catch {}
             }
           }
         }
