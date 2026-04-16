@@ -1,11 +1,9 @@
-// apps/api/src/routes/narratives.js
-
 const { Router } = require('express')
 const { supabase } = require('../lib/supabase')
 
 const narrativeRouter = Router()
 
-// GET /api/narratives
+// GET /api/narratives — get all active narratives sorted by hype score
 narrativeRouter.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -13,7 +11,7 @@ narrativeRouter.get('/', async (req, res) => {
       .select('*')
       .gt('expires_at', new Date().toISOString())
       .order('hype_score', { ascending: false })
-      .limit(20)  // ← was 20 in DB cap, now exposed fully to frontend
+      .limit(20)
 
     if (error) throw error
     res.json({ success: true, data })
