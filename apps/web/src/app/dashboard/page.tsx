@@ -50,76 +50,7 @@ const FALLBACK_COINS: AlphaCoin[] = [
   { name: 'CatWif',   ticker: 'CATWIF',   chain: 'solana', market_cap: 430000000, change_pct: 2400, narrative: 'Dog wif hat derivative',  dex_url: 'https://dexscreener.com' },
 ]
 
-function ProofOfAlphaSlider() {
-  const [coins, setCoins] = useState<AlphaCoin[]>(FALLBACK_COINS)
-  const trackRef  = useRef<HTMLDivElement>(null)
-  const animRef   = useRef<number>()
-  const posRef    = useRef(0)
-  const pausedRef = useRef(false)
 
-  useEffect(() => {
-    api.get('/api/analytics/proof-of-alpha')
-      .then(res => {
-        if (res.data.success && res.data.data?.length >= 3) setCoins(res.data.data)
-      })
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    const track = trackRef.current
-    if (!track) return
-    const SPEED = 0.45
-    const tick = () => {
-      if (!pausedRef.current) {
-        posRef.current += SPEED
-        const half = track.scrollWidth / 2
-        if (posRef.current >= half) posRef.current = 0
-        track.style.transform = `translateX(-${posRef.current}px)`
-      }
-      animRef.current = requestAnimationFrame(tick)
-    }
-    animRef.current = requestAnimationFrame(tick)
-    return () => { if (animRef.current) cancelAnimationFrame(animRef.current) }
-  }, [coins])
-
-  const all = [...coins, ...coins]
-
-  return (
-    <div style={{ background: '#0A0A0F', border: '1px solid #1E1E2E', borderRadius: 12, padding: '16px 0 12px', overflow: 'hidden', marginBottom: 24 }}>
-      <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 6px #00FF88', animation: 'pulse 2s infinite' }} />
-          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#4B5563', letterSpacing: '0.12em' }}>PROOF OF ALPHA</span>
-        </div>
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#374151' }}>Tokens our scanner caught — live results</span>
-      </div>
-
-      <div style={{ overflow: 'hidden', width: '100%' }} onMouseEnter={() => { pausedRef.current = true }} onMouseLeave={() => { pausedRef.current = false }}>
-        <div ref={trackRef} style={{ display: 'flex', gap: 10, width: 'max-content', paddingLeft: 20 }}>
-          {all.map((coin, i) => (
-            <a key={i} href={coin.dex_url} target="_blank" rel="noreferrer"
-              style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0, width: 168, padding: '10px 12px', background: '#0E0E16', border: '1px solid #1E1E2E', borderRadius: 8, textDecoration: 'none', transition: 'border-color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(0,255,136,0.3)')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E1E2E')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, fontWeight: 700, color: '#F9FAFB' }}>${coin.ticker}</span>
-                {coin.change_pct > 0 && (
-                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, fontWeight: 700, color: '#00FF88' }}>
-                    +{coin.change_pct >= 1000 ? `${(coin.change_pct / 1000).toFixed(1)}K` : coin.change_pct.toFixed(0)}%
-                  </span>
-                )}
-              </div>
-              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: '#00FF88' }}>{fmtMc(coin.market_cap)}</div>
-              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{coin.narrative}</div>
-            </a>
-          ))}
-        </div>
-      </div>
-      <div style={{ padding: '10px 20px 0', fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#2A2A3E' }}>Data via DexScreener · Not financial advice</div>
-    </div>
-  )
-}
 
 export default function DashboardPage() {
   const { narratives, loading, error, refresh, lastUpdated } = useNarratives()
@@ -148,7 +79,7 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      <ProofOfAlphaSlider />
+     
 
       {error && (
         <div className="error-banner" style={{ marginBottom: 16 }}>
