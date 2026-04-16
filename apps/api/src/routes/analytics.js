@@ -34,7 +34,7 @@ analyticsRouter.get('/proof-of-alpha', async (req, res) => {
           if (!pair) return
 
           const marketCap = pair.marketCap || pair.fdv || 0
-          if (marketCap < 500) return // skip effectively dead tokens
+          if (marketCap < 50_000) return // $50k minimum
 
           results.push({
             name:       draft.name || draft.ticker,
@@ -58,7 +58,7 @@ analyticsRouter.get('/proof-of-alpha', async (req, res) => {
 
     if (copycats?.length) {
       for (const c of copycats) {
-        if (!c.copycat_ticker || (c.market_cap || 0) < 500) continue
+        if (!c.copycat_ticker || (c.market_cap || 0) < 50_000) continue
         const originalTicker = c.launched_tokens?.token_drafts?.ticker || '?'
         results.push({
           name:       c.copycat_name || c.copycat_ticker,

@@ -53,36 +53,27 @@ async function checkNarrativeSaturation(name, ticker) {
     searchTokens(name, 15),
   ])
 
-  // Merge and deduplicate
   const seen = new Set()
   const all = []
   for (const t of [...byTicker, ...byName]) {
     const key = `${t.chain}_${t.address}`
-    if (!seen.has(key)) {
-      seen.add(key)
-      all.push(t)
-    }
+    if (!seen.has(key)) { seen.add(key); all.push(t) }
   }
 
-  // Exact ticker matches
-  const exactTicker = all.filter(t =>
-    t.ticker.toUpperCase() === ticker.toUpperCase()
-  )
-
-  // Similar name matches (contains name words)
-  const nameWords = name.toLowerCase().split(/\s+/).filter(w => w.length > 2)
+  const exactTicker = all.filter(t => t.ticker.toUpperCase() === ticker.toUpperCase())
+  const nameWords   = name.toLowerCase().split(/\s+/).filter(w => w.length > 2)
   const similarName = all.filter(t =>
     nameWords.some(w => t.name.toLowerCase().includes(w)) &&
     !exactTicker.find(e => e.address === t.address)
   )
 
-  const totalVol = all.reduce((s, t) => s + t.volume_24h, 0)
+  const totalVol  = all.reduce((s, t) => s + t.volume_24h, 0)
   const totalMcap = all.reduce((s, t) => s + t.market_cap, 0)
 
   return {
     exact_ticker_matches: exactTicker,
     similar_name_matches: similarName,
-    total_found:     all.length,
+    total_found:      all.length,
     total_volume_24h: totalVol,
     total_mcap:       totalMcap,
     saturation_level: exactTicker.length > 5 ? 'very_high'
@@ -92,40 +83,37 @@ async function checkNarrativeSaturation(name, ticker) {
   }
 }
 
-// ── Copycat detector: find tokens similar to an already-launched token ────────
+// ── Copycat detector ──────────────────────────────────────────────────────────
+//
+// Rules (strict):
+//   1. MUST have the EXACT same ticker (case-insensitive). No name fuzzy matching.
+//   2. Must NOT be the original contract address.
+//   3. Must have market cap ≥ $50,000 — filters out dead/spam tokens.
+//
+// Why strict ticker-only:
+//   $ASTRO should never match $PKR just because "astro" appears somewhere.
+//   $MOMMA should never match $SHAK. Same ticker = same narrative claim.
+
 async function findCopycats(name, ticker, contractAddress, launchedAt) {
-  const [byTicker, byName] = await Promise.all([
-    searchTokens(ticker, 30),
-    searchTokens(name, 30),
-  ])
+  // Search only by ticker — no name search, that's what caused false matches
+  const results = await searchTokens(ticker, 50)
 
-  const seen = new Set()
-  const all = []
-  for (const t of [...byTicker, ...byName]) {
-    const key = `${t.chain}_${t.address}`
-    if (!seen.has(key)) {
-      seen.add(key)
-      all.push(t)
-    }
-  }
+  const MIN_MARKET_CAP = 50_000 // $50k floor
 
-  // Filter out the original token and find newer ones
-  const launchTime = launchedAt ? new Date(launchedAt).getTime() : 0
+  const copycats = results.filter(t => {
+    // Must be exact ticker match (case-insensitive)
+    if (t.ticker.toUpperCase() !== ticker.toUpperCase()) return false
 
-  const copycats = all.filter(t => {
-    // Not the original contract
+    // Must not be the original token
     if (t.address.toLowerCase() === contractAddress?.toLowerCase()) return false
 
-    // Ticker or name similarity
-    const tickerMatch = t.ticker.toUpperCase() === ticker.toUpperCase()
-    const nameWords   = name.toLowerCase().split(/\s+/).filter(w => w.length > 3)
-    const nameMatch   = nameWords.some(w => t.name.toLowerCase().includes(w))
+    // Must meet minimum market cap
+    if ((t.market_cap || 0) < MIN_MARKET_CAP) return false
 
-    return tickerMatch || nameMatch
+    return true
   }).map(t => ({
     ...t,
-    is_newer: t.created_at ? t.created_at > launchTime : null,
-    similarity: t.ticker.toUpperCase() === ticker.toUpperCase() ? 'exact_ticker' : 'similar_name',
+    similarity: 'exact_ticker',
   }))
 
   return copycats
